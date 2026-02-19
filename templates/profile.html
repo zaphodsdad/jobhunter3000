@@ -825,6 +825,32 @@
         </div>
 
         <!-- ════════════════════════════════════════════════════
+             Technical Projects / Homelab
+             ════════════════════════════════════════════════════ -->
+        <div class="section-card">
+            <h2>Technical Projects &amp; Homelab</h2>
+            <p class="section-desc">
+                Document your infrastructure, side projects, and hands-on technical experience.
+                This feeds into job scoring and resume generation for IT/infrastructure roles.
+            </p>
+
+            <div class="form-group">
+                <textarea class="pitch-area" id="candidate_technical_projects" name="candidate_technical_projects"
+                          rows="12"
+                          style="font-size: 13px; line-height: 1.6;"
+                          placeholder="Example:
+— 3-node Proxmox cluster (64GB main + 2 satellite nodes) running 12 LXC containers and 2 VMs
+— 20TB Unraid NAS with parity, Docker stack (Plex, Sonarr, Radarr, etc.)
+— OPNsense firewall with Tailscale VPN for remote access across 12 devices
+— 10 custom MCP servers on dedicated gateway node (infrastructure, media, business APIs)
+— Uptime Kuma monitoring 22 services with Pushover alerts
+— Automated nightly PBS backups, rclone offsite, Syncthing real-time sync
+— 3 daily automated email reports (business metrics, infrastructure health, media)
+— Mac Studio M1 32GB as local LLM inference server (Ollama, 6 models)">{{ settings.candidate_technical_projects }}</textarea>
+            </div>
+        </div>
+
+        <!-- ════════════════════════════════════════════════════
              Save
              ════════════════════════════════════════════════════ -->
         <button type="submit" class="btn btn-primary btn-save" id="saveBtn">Save Dossier</button>

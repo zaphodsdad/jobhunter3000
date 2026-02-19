@@ -7,245 +7,110 @@
     <style>
         {% include 'base_styles.html' %}
 
-        /* ── Settings-specific styles ──────────────────────── */
-
-        .settings-form {
-            max-width: 800px;
-        }
+        .settings-form { max-width: 800px; }
 
         .card-header {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 16px;
-            padding-bottom: 12px;
+            display: flex; align-items: center; gap: 10px;
+            margin-bottom: 16px; padding-bottom: 12px;
             border-bottom: 1px solid var(--border);
         }
-
         .card-header h2 {
-            margin-bottom: 0;
-            font-size: 16px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
+            margin-bottom: 0; font-size: 16px;
+            text-transform: uppercase; letter-spacing: 1px;
         }
+        .card-header h2::before { content: '//'; color: var(--accent-primary); margin-right: 8px; }
 
-        .card-header h2::before {
-            content: '//';
-            color: var(--accent-primary);
-            margin-right: 8px;
-        }
-
-        /* Radio toggle group */
-        .radio-group {
-            display: flex;
-            gap: 0;
-            margin-bottom: 20px;
-        }
-
+        .radio-group { display: flex; gap: 0; margin-bottom: 20px; }
         .radio-group label {
-            flex: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            padding: 10px 16px;
-            font-size: 14px;
-            font-weight: 500;
-            color: var(--text-secondary);
-            background: var(--bg-nav);
-            border: 1px solid var(--border);
-            cursor: pointer;
-            transition: all 0.15s ease;
+            flex: 1; display: flex; align-items: center; justify-content: center;
+            gap: 8px; padding: 10px 16px; font-size: 14px; font-weight: 500;
+            color: var(--text-secondary); background: var(--bg-nav);
+            border: 1px solid var(--border); cursor: pointer; transition: all 0.15s ease;
         }
-
-        .radio-group label:first-child {
-            border-radius: 6px 0 0 6px;
-        }
-
-        .radio-group label:last-child {
-            border-radius: 0 6px 6px 0;
-        }
-
-        .radio-group label:not(:first-child) {
-            border-left: none;
-        }
-
-        .radio-group input[type="radio"] {
-            display: none;
-        }
-
+        .radio-group label:first-child { border-radius: 6px 0 0 6px; }
+        .radio-group label:last-child { border-radius: 0 6px 6px 0; }
+        .radio-group label:not(:first-child) { border-left: none; }
+        .radio-group input[type="radio"] { display: none; }
         .radio-group input[type="radio"]:checked + label,
         .radio-group label.selected {
-            background: var(--accent-primary);
-            color: #0f1117;
-            border-color: var(--accent-primary);
-            font-weight: 600;
+            background: var(--accent-primary); color: #0f1117;
+            border-color: var(--accent-primary); font-weight: 600;
         }
 
-        .provider-fields {
-            display: none;
-        }
+        .provider-fields { display: none; }
+        .provider-fields.active { display: block; }
 
-        .provider-fields.active {
-            display: block;
-        }
-
-        /* Password toggle */
-        .input-with-toggle {
-            position: relative;
-        }
-
-        .input-with-toggle input {
-            padding-right: 48px;
-        }
-
+        .input-with-toggle { position: relative; }
+        .input-with-toggle input { padding-right: 48px; }
         .toggle-visibility {
-            position: absolute;
-            right: 8px;
-            top: 50%;
-            transform: translateY(-50%);
-            background: transparent;
-            border: none;
-            color: var(--text-muted);
-            cursor: pointer;
-            font-size: 12px;
-            padding: 4px 8px;
-            border-radius: 4px;
-            transition: color 0.15s ease;
+            position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+            background: transparent; border: none; color: var(--text-muted);
+            cursor: pointer; font-size: 12px; padding: 4px 8px;
+            border-radius: 4px; transition: color 0.15s ease;
         }
+        .toggle-visibility:hover { color: var(--text-primary); }
 
-        .toggle-visibility:hover {
-            color: var(--text-primary);
-        }
+        .test-row { display: flex; align-items: center; gap: 12px; margin-top: 8px; }
+        .test-result { font-size: 13px; font-weight: 500; opacity: 0; transition: opacity 0.2s ease; }
+        .test-result.visible { opacity: 1; }
+        .test-result.success { color: var(--score-high); }
+        .test-result.error { color: #f87171; }
 
-        /* Test connection button + result */
-        .test-row {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin-top: 8px;
-        }
+        .threshold-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 
-        .test-result {
-            font-size: 13px;
-            font-weight: 500;
-            opacity: 0;
-            transition: opacity 0.2s ease;
-        }
-
-        .test-result.visible {
-            opacity: 1;
-        }
-
-        .test-result.success {
-            color: var(--score-high);
-        }
-
-        .test-result.error {
-            color: #f87171;
-        }
-
-        /* Threshold inputs inline */
-        .threshold-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 16px;
-        }
-
-        /* Search profiles readonly list */
-        .profile-list {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
+        .profile-list { display: flex; flex-direction: column; gap: 8px; }
         .profile-item {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 10px 14px;
-            background: var(--bg-nav);
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            font-size: 13px;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 10px 14px; background: var(--bg-nav);
+            border: 1px solid var(--border); border-radius: 6px; font-size: 13px;
         }
-
-        .profile-item .profile-name {
-            font-weight: 600;
-            color: var(--text-primary);
-        }
-
-        .profile-item .profile-meta {
-            color: var(--text-secondary);
-            font-size: 12px;
-        }
-
-        .profile-item .profile-boards {
-            display: flex;
-            gap: 4px;
-        }
-
+        .profile-item .profile-name { font-weight: 600; color: var(--text-primary); }
+        .profile-item .profile-meta { color: var(--text-secondary); font-size: 12px; }
+        .profile-item .profile-boards { display: flex; gap: 4px; }
         .board-tag {
-            display: inline-block;
-            padding: 2px 8px;
-            font-size: 10px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            background: rgba(34, 211, 238, 0.1);
-            color: var(--accent-primary);
-            border-radius: 4px;
+            display: inline-block; padding: 2px 8px; font-size: 10px;
+            font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;
+            background: rgba(34, 211, 238, 0.1); color: var(--accent-primary); border-radius: 4px;
         }
+        .profile-note { font-size: 12px; color: var(--text-muted); margin-top: 12px; font-style: italic; }
 
-        .profile-note {
-            font-size: 12px;
-            color: var(--text-muted);
-            margin-top: 12px;
-            font-style: italic;
-        }
-
-        /* Save button full width */
         .btn-save {
-            width: 100%;
-            padding: 14px;
-            font-size: 16px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-top: 8px;
+            width: 100%; padding: 14px; font-size: 16px; font-weight: 700;
+            text-transform: uppercase; letter-spacing: 1px; margin-top: 8px;
         }
 
-        /* Section description */
-        .section-desc {
-            font-size: 13px;
-            color: var(--text-muted);
-            margin-bottom: 16px;
+        .section-desc { font-size: 13px; color: var(--text-muted); margin-bottom: 16px; }
+
+        .model-select {
+            width: 100%; padding: 9px 12px; font-size: 14px; font-family: var(--font-stack);
+            color: var(--text-primary); background: var(--bg-nav);
+            border: 1px solid var(--border); border-radius: 6px;
         }
+        .model-select:focus { outline: none; border-color: var(--accent-primary); }
+
+        .model-status {
+            font-size: 12px; color: var(--text-muted); margin-top: 4px;
+        }
+        .model-status.error { color: #f87171; }
+        .model-status.ok { color: #4ade80; }
     </style>
 </head>
 <body>
 
-<!-- ── Topbar ──────────────────────────────────────────────── -->
-<div class="topbar">
-    <h1>Job<span>Hunter</span>3000</h1>
-</div>
+<div class="topbar"><h1>Job<span>Hunter</span>3000</h1></div>
 
-<!-- ── Navigation ─────────────────────────────────────────── -->
 {% set active = 'settings' %}
 {% include 'nav.html' %}
 
-<!-- ── Content ────────────────────────────────────────────── -->
 <div class="content">
     <form method="POST" action="/settings" class="settings-form">
 
         <!-- ════════════════════════════════════════════════════
-             LLM Provider
+             LLM Provider (Analysis / Resume / Suggestions)
              ════════════════════════════════════════════════════ -->
         <div class="card">
-            <div class="card-header">
-                <h2>LLM Provider</h2>
-            </div>
-            <p class="section-desc">Choose where job scoring and resume generation requests are sent.</p>
+            <div class="card-header"><h2>LLM Provider</h2></div>
+            <p class="section-desc">Used for resume analysis, profile synthesis, AI search suggestions, and cover letter generation. Pick the smartest model you can afford.</p>
 
             <div class="radio-group">
                 <input type="radio" name="llm_provider" id="provider-openrouter" value="openrouter"
@@ -253,15 +118,10 @@
                 <label for="provider-openrouter" id="label-openrouter"
                        class="{% if settings.llm_provider == 'openrouter' %}selected{% endif %}">OpenRouter</label>
 
-                <input type="radio" name="llm_provider" id="provider-google" value="google"
-                       {% if settings.llm_provider == 'google' %}checked{% endif %}>
-                <label for="provider-google" id="label-google"
-                       class="{% if settings.llm_provider == 'google' %}selected{% endif %}">Google Gemini</label>
-
                 <input type="radio" name="llm_provider" id="provider-ollama" value="ollama"
                        {% if settings.llm_provider == 'ollama' %}checked{% endif %}>
                 <label for="provider-ollama" id="label-ollama"
-                       class="{% if settings.llm_provider == 'ollama' %}selected{% endif %}">Ollama</label>
+                       class="{% if settings.llm_provider == 'ollama' %}selected{% endif %}">Ollama (Local)</label>
             </div>
 
             <!-- OpenRouter fields -->
@@ -277,28 +137,9 @@
                 </div>
                 <div class="form-group">
                     <label for="openrouter_model">Model</label>
-                    <input type="text" id="openrouter_model" name="openrouter_model"
-                           value="{{ settings.openrouter_model }}"
-                           placeholder="anthropic/claude-sonnet-4">
-                </div>
-            </div>
-
-            <!-- Google Gemini fields -->
-            <div id="google-fields" class="provider-fields {% if settings.llm_provider == 'google' %}active{% endif %}">
-                <div class="form-group">
-                    <label for="google_api_key">API Key</label>
-                    <div class="input-with-toggle">
-                        <input type="password" id="google_api_key" name="google_api_key"
-                               value="{{ settings.google_api_key }}"
-                               placeholder="AIza...">
-                        <button type="button" class="toggle-visibility" onclick="toggleGoogleKey()" id="toggle-google-btn">SHOW</button>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label for="google_model">Model</label>
-                    <input type="text" id="google_model" name="google_model"
-                           value="{{ settings.google_model }}"
-                           placeholder="gemini-2.0-flash">
+                    <select id="openrouter_model" name="openrouter_model" class="model-select">
+                        <option value="">-- Select Model --</option>
+                    </select>
                 </div>
             </div>
 
@@ -312,9 +153,10 @@
                 </div>
                 <div class="form-group">
                     <label for="ollama_model">Model</label>
-                    <input type="text" id="ollama_model" name="ollama_model"
-                           value="{{ settings.ollama_model }}"
-                           placeholder="qwen2.5-coder:32b">
+                    <select id="ollama_model" name="ollama_model" class="model-select">
+                        <option value="">Loading...</option>
+                    </select>
+                    <div class="model-status" id="ollama-main-status"></div>
                 </div>
             </div>
 
@@ -325,12 +167,58 @@
         </div>
 
         <!-- ════════════════════════════════════════════════════
+             Scoring Model
+             ════════════════════════════════════════════════════ -->
+        <div class="card">
+            <div class="card-header"><h2>Scoring Model</h2></div>
+            <p class="section-desc">
+                Runs on every job found — use the cheapest model that can output JSON.
+                Ollama is free. OpenRouter Haiku is ~$0.001/job.
+            </p>
+
+            <div class="radio-group">
+                <input type="radio" name="scoring_provider" id="scoring-openrouter" value="openrouter"
+                       {% if settings.scoring_provider == 'openrouter' %}checked{% endif %}>
+                <label for="scoring-openrouter" id="label-scoring-openrouter"
+                       class="{% if settings.scoring_provider == 'openrouter' %}selected{% endif %}">OpenRouter</label>
+
+                <input type="radio" name="scoring_provider" id="scoring-ollama" value="ollama"
+                       {% if settings.scoring_provider == 'ollama' %}checked{% endif %}>
+                <label for="scoring-ollama" id="label-scoring-ollama"
+                       class="{% if settings.scoring_provider == 'ollama' %}selected{% endif %}">Ollama (Free)</label>
+            </div>
+
+            <!-- Scoring OpenRouter model -->
+            <div id="scoring-openrouter-fields" class="provider-fields {% if settings.scoring_provider == 'openrouter' %}active{% endif %}">
+                <div class="form-group">
+                    <label for="scoring_model_or">Scoring Model</label>
+                    <select id="scoring_model_or" class="model-select" onchange="syncScoringModel()">
+                        <option value="">-- Select Model --</option>
+                    </select>
+                    <div class="model-status">Uses the API key from LLM Provider above.</div>
+                </div>
+            </div>
+
+            <!-- Scoring Ollama model -->
+            <div id="scoring-ollama-fields" class="provider-fields {% if settings.scoring_provider == 'ollama' %}active{% endif %}">
+                <div class="form-group">
+                    <label for="scoring_model_ollama">Scoring Model</label>
+                    <select id="scoring_model_ollama" class="model-select" onchange="syncScoringModel()">
+                        <option value="">Loading...</option>
+                    </select>
+                    <div class="model-status" id="ollama-scoring-status"></div>
+                </div>
+            </div>
+
+            <!-- Hidden field that actually gets submitted -->
+            <input type="hidden" id="scoring_model" name="scoring_model" value="{{ settings.scoring_model }}">
+        </div>
+
+        <!-- ════════════════════════════════════════════════════
              Notifications
              ════════════════════════════════════════════════════ -->
         <div class="card">
-            <div class="card-header">
-                <h2>Notifications</h2>
-            </div>
+            <div class="card-header"><h2>Notifications</h2></div>
             <p class="section-desc">Pushover credentials and scoring thresholds for job match alerts.</p>
 
             <div class="form-group">
@@ -371,9 +259,7 @@
              Search Profiles
              ════════════════════════════════════════════════════ -->
         <div class="card">
-            <div class="card-header">
-                <h2>Search Profiles</h2>
-            </div>
+            <div class="card-header"><h2>Search Profiles</h2></div>
             <p class="section-desc">Active search configurations used during scraping runs.</p>
 
             <div class="profile-list">
@@ -398,9 +284,7 @@
              Filters
              ════════════════════════════════════════════════════ -->
         <div class="card">
-            <div class="card-header">
-                <h2>Filters</h2>
-            </div>
+            <div class="card-header"><h2>Filters</h2></div>
             <p class="section-desc">Keywords and age limits to automatically exclude irrelevant postings.</p>
 
             <div class="form-group">
@@ -417,27 +301,143 @@
             </div>
         </div>
 
-        <!-- ════════════════════════════════════════════════════
-             Save
-             ════════════════════════════════════════════════════ -->
         <button type="submit" class="btn btn-primary btn-save">Save Settings</button>
-
     </form>
 </div>
 
-<!-- ── Toast Container ────────────────────────────────────── -->
 <div class="toast-container" id="toast-container"></div>
 
-<!-- ── JavaScript ─────────────────────────────────────────── -->
 <script>
-    // ── Provider toggle ─────────────────────────────────────
-    const providers = ['openrouter', 'google', 'ollama'];
+    // ── Current saved values ──────────────────────────────
+    var SAVED_OR_MODEL = {{ settings.openrouter_model | tojson }};
+    var SAVED_OLLAMA_MODEL = {{ settings.ollama_model | tojson }};
+    var SAVED_SCORING_MODEL = {{ settings.scoring_model | tojson }};
 
-    function updateProviderFields() {
-        const selected = document.querySelector('input[name="llm_provider"]:checked').value;
-        providers.forEach(function(p) {
-            const fields = document.getElementById(p + '-fields');
-            const label = document.getElementById('label-' + p);
+    // ── OpenRouter model catalog (curated) ────────────────
+    var OR_MODELS = [
+        { group: 'Anthropic', models: [
+            { id: 'anthropic/claude-opus-4', name: 'Claude Opus 4', tier: 'premium' },
+            { id: 'anthropic/claude-sonnet-4', name: 'Claude Sonnet 4', tier: 'smart' },
+            { id: 'anthropic/claude-haiku-4-5-20251001', name: 'Claude Haiku 4.5', tier: 'cheap' },
+        ]},
+        { group: 'Meta', models: [
+            { id: 'meta-llama/llama-3.3-70b-instruct', name: 'Llama 3.3 70B', tier: 'smart' },
+            { id: 'meta-llama/llama-3.1-8b-instruct', name: 'Llama 3.1 8B', tier: 'cheap' },
+        ]},
+        { group: 'Google', models: [
+            { id: 'google/gemini-2.5-pro-preview', name: 'Gemini 2.5 Pro', tier: 'premium' },
+            { id: 'google/gemini-2.0-flash-001', name: 'Gemini 2.0 Flash', tier: 'cheap' },
+        ]},
+        { group: 'DeepSeek', models: [
+            { id: 'deepseek/deepseek-r1', name: 'DeepSeek R1', tier: 'smart' },
+            { id: 'deepseek/deepseek-chat', name: 'DeepSeek Chat V3', tier: 'cheap' },
+        ]},
+        { group: 'OpenAI', models: [
+            { id: 'openai/gpt-4o', name: 'GPT-4o', tier: 'smart' },
+            { id: 'openai/gpt-4o-mini', name: 'GPT-4o Mini', tier: 'cheap' },
+        ]},
+        { group: 'Qwen', models: [
+            { id: 'qwen/qwen-2.5-72b-instruct', name: 'Qwen 2.5 72B', tier: 'smart' },
+            { id: 'qwen/qwen-2.5-coder-32b-instruct', name: 'Qwen 2.5 Coder 32B', tier: 'cheap' },
+        ]},
+    ];
+
+    function populateORDropdown(selectId, savedValue) {
+        var sel = document.getElementById(selectId);
+        if (!sel) return;
+        sel.innerHTML = '<option value="">-- Select Model --</option>';
+        OR_MODELS.forEach(function(group) {
+            var optgroup = document.createElement('optgroup');
+            optgroup.label = group.group;
+            group.models.forEach(function(m) {
+                var opt = document.createElement('option');
+                opt.value = m.id;
+                var tierLabel = m.tier === 'premium' ? ' [Premium]' : m.tier === 'cheap' ? ' [Cheap]' : '';
+                opt.textContent = m.name + tierLabel;
+                if (m.id === savedValue) opt.selected = true;
+                optgroup.appendChild(opt);
+            });
+            sel.appendChild(optgroup);
+        });
+        // If saved value not in catalog, add it as custom option
+        if (savedValue && !sel.value) {
+            var opt = document.createElement('option');
+            opt.value = savedValue;
+            opt.textContent = savedValue + ' (custom)';
+            opt.selected = true;
+            sel.insertBefore(opt, sel.children[1]);
+        }
+    }
+
+    // ── Ollama model fetch ────────────────────────────────
+    var ollamaModelsCache = null;
+
+    function fetchOllamaModels(callback) {
+        if (ollamaModelsCache) { callback(ollamaModelsCache); return; }
+        fetch('/api/ollama/models').then(function(r) { return r.json(); }).then(function(data) {
+            if (data.ok) {
+                ollamaModelsCache = data.models;
+                callback(data.models);
+            } else {
+                callback(null, data.error);
+            }
+        }).catch(function(err) { callback(null, err.message); });
+    }
+
+    function populateOllamaDropdown(selectId, statusId, savedValue) {
+        var sel = document.getElementById(selectId);
+        var status = statusId ? document.getElementById(statusId) : null;
+        if (!sel) return;
+
+        fetchOllamaModels(function(models, error) {
+            sel.innerHTML = '';
+            if (error || !models) {
+                sel.innerHTML = '<option value="">-- Ollama offline --</option>';
+                if (savedValue) {
+                    var opt = document.createElement('option');
+                    opt.value = savedValue;
+                    opt.textContent = savedValue + ' (saved, offline)';
+                    opt.selected = true;
+                    sel.appendChild(opt);
+                }
+                if (status) {
+                    status.textContent = 'Cannot reach Ollama: ' + (error || 'unknown error');
+                    status.className = 'model-status error';
+                }
+                return;
+            }
+
+            models.forEach(function(m) {
+                var opt = document.createElement('option');
+                opt.value = m.name;
+                opt.textContent = m.name + ' (' + m.size_gb + ' GB)';
+                if (m.name === savedValue) opt.selected = true;
+                sel.appendChild(opt);
+            });
+
+            if (savedValue && !sel.value) {
+                var opt = document.createElement('option');
+                opt.value = savedValue;
+                opt.textContent = savedValue + ' (saved, not found)';
+                opt.selected = true;
+                sel.insertBefore(opt, sel.firstChild);
+            }
+
+            if (status) {
+                status.textContent = models.length + ' models available';
+                status.className = 'model-status ok';
+            }
+        });
+    }
+
+    // ── Provider toggle (main LLM) ───────────────────────
+    var mainProviders = ['openrouter', 'ollama'];
+
+    function updateMainProvider() {
+        var selected = document.querySelector('input[name="llm_provider"]:checked').value;
+        mainProviders.forEach(function(p) {
+            var fields = document.getElementById(p + '-fields');
+            var label = document.getElementById('label-' + p);
             if (p === selected) {
                 if (fields) fields.classList.add('active');
                 if (label) label.classList.add('selected');
@@ -448,47 +448,63 @@
         });
     }
 
-    providers.forEach(function(p) {
+    mainProviders.forEach(function(p) {
         var radio = document.getElementById('provider-' + p);
-        if (radio) radio.addEventListener('change', updateProviderFields);
+        if (radio) radio.addEventListener('change', updateMainProvider);
     });
 
-    // ── API key show/hide ───────────────────────────────────
+    // ── Provider toggle (scoring) ─────────────────────────
+    var scoringProviders = ['openrouter', 'ollama'];
+
+    function updateScoringProvider() {
+        var selected = document.querySelector('input[name="scoring_provider"]:checked').value;
+        scoringProviders.forEach(function(p) {
+            var fields = document.getElementById('scoring-' + p + '-fields');
+            var label = document.getElementById('label-scoring-' + p);
+            if (p === selected) {
+                if (fields) fields.classList.add('active');
+                if (label) label.classList.add('selected');
+            } else {
+                if (fields) fields.classList.remove('active');
+                if (label) label.classList.remove('selected');
+            }
+        });
+        syncScoringModel();
+    }
+
+    scoringProviders.forEach(function(p) {
+        var radio = document.getElementById('scoring-' + p);
+        if (radio) radio.addEventListener('change', updateScoringProvider);
+    });
+
+    function syncScoringModel() {
+        var provider = document.querySelector('input[name="scoring_provider"]:checked').value;
+        var hidden = document.getElementById('scoring_model');
+        if (provider === 'openrouter') {
+            hidden.value = document.getElementById('scoring_model_or').value;
+        } else {
+            hidden.value = document.getElementById('scoring_model_ollama').value;
+        }
+    }
+
+    // ── API key show/hide ─────────────────────────────────
     function toggleApiKey() {
-        const input = document.getElementById('openrouter_api_key');
-        const btn = document.getElementById('toggle-key-btn');
-        if (input.type === 'password') {
-            input.type = 'text';
-            btn.textContent = 'HIDE';
-        } else {
-            input.type = 'password';
-            btn.textContent = 'SHOW';
-        }
+        var input = document.getElementById('openrouter_api_key');
+        var btn = document.getElementById('toggle-key-btn');
+        if (input.type === 'password') { input.type = 'text'; btn.textContent = 'HIDE'; }
+        else { input.type = 'password'; btn.textContent = 'SHOW'; }
     }
 
-    function toggleGoogleKey() {
-        const input = document.getElementById('google_api_key');
-        const btn = document.getElementById('toggle-google-btn');
-        if (input.type === 'password') {
-            input.type = 'text';
-            btn.textContent = 'HIDE';
-        } else {
-            input.type = 'password';
-            btn.textContent = 'SHOW';
-        }
-    }
-
-    // ── Test LLM connection ─────────────────────────────────
+    // ── Test LLM ──────────────────────────────────────────
     async function testLLM() {
-        const result = document.getElementById('llm-test-result');
+        var result = document.getElementById('llm-test-result');
         result.textContent = 'Testing...';
         result.className = 'test-result visible';
-
         try {
-            const resp = await fetch('/api/test-llm', { method: 'POST' });
-            const data = await resp.json();
+            var resp = await fetch('/api/test-llm', { method: 'POST' });
+            var data = await resp.json();
             if (data.ok) {
-                result.textContent = 'Connected!';
+                result.textContent = 'Connected! Response: ' + (data.response || '').substring(0, 60);
                 result.className = 'test-result visible success';
             } else {
                 result.textContent = data.error || 'Connection failed';
@@ -500,15 +516,14 @@
         }
     }
 
-    // ── Test notification ───────────────────────────────────
+    // ── Test notification ─────────────────────────────────
     async function testNotify() {
-        const result = document.getElementById('notify-test-result');
+        var result = document.getElementById('notify-test-result');
         result.textContent = 'Sending...';
         result.className = 'test-result visible';
-
         try {
-            const resp = await fetch('/api/test-notify', { method: 'POST' });
-            const data = await resp.json();
+            var resp = await fetch('/api/test-notify', { method: 'POST' });
+            var data = await resp.json();
             if (data.ok) {
                 result.textContent = 'Sent!';
                 result.className = 'test-result visible success';
@@ -522,28 +537,39 @@
         }
     }
 
-    // ── Toast helper ────────────────────────────────────────
+    // ── Toast ─────────────────────────────────────────────
     function showToast(message, type) {
-        const container = document.getElementById('toast-container');
-        const toast = document.createElement('div');
+        var container = document.getElementById('toast-container');
+        var toast = document.createElement('div');
         toast.className = 'toast toast-' + (type || 'success');
         toast.textContent = message;
         container.appendChild(toast);
-
         setTimeout(function() {
             toast.style.animation = 'toast-out 0.3s ease forwards';
-            setTimeout(function() {
-                toast.remove();
-            }, 300);
+            setTimeout(function() { toast.remove(); }, 300);
         }, 4000);
     }
 
-    // ── Show saved toast on load if applicable ──────────────
     {% if saved %}
     document.addEventListener('DOMContentLoaded', function() {
         showToast('Settings saved successfully', 'success');
     });
     {% endif %}
+
+    // ── Initialize dropdowns on page load ─────────────────
+    document.addEventListener('DOMContentLoaded', function() {
+        // OpenRouter dropdowns
+        populateORDropdown('openrouter_model', SAVED_OR_MODEL);
+        populateORDropdown('scoring_model_or', SAVED_SCORING_MODEL);
+
+        // Ollama dropdowns
+        populateOllamaDropdown('ollama_model', 'ollama-main-status', SAVED_OLLAMA_MODEL);
+        populateOllamaDropdown('scoring_model_ollama', 'ollama-scoring-status', SAVED_SCORING_MODEL);
+
+        // Sync scoring hidden field on dropdown changes
+        document.getElementById('scoring_model_or').addEventListener('change', syncScoringModel);
+        document.getElementById('scoring_model_ollama').addEventListener('change', syncScoringModel);
+    });
 </script>
 
 </body>

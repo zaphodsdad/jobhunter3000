@@ -7,7 +7,7 @@ Browse: http://localhost:8001
 import json
 import os
 from fastapi import FastAPI, Request, Form, UploadFile, File
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, FileResponse
 from fastapi.templating import Jinja2Templates
 from typing import Optional
 import uvicorn
@@ -31,6 +31,7 @@ def startup():
     os.makedirs("data", exist_ok=True)
     os.makedirs("data/resumes", exist_ok=True)
     os.makedirs("data/cover-letters", exist_ok=True)
+    os.makedirs("data/generated", exist_ok=True)
     os.makedirs("logs", exist_ok=True)
     conn = get_db()
     ensure_tables(conn)
@@ -61,7 +62,7 @@ async def dashboard(request: Request):
 async def jobs_page(request: Request,
                     status: Optional[str] = None,
                     source: Optional[str] = None,
-                    sort: Optional[str] = "created_at",
+                    sort: Optional[str] = "score",
                     order: Optional[str] = "desc"):
     conn = get_db()
     jobs = get_jobs(conn, status=status, source=source, sort=sort, order=order)
@@ -402,19 +403,23 @@ async def api_analyze_resume(resume_id: int):
         return JSONResponse({"error": "No text content extracted from resume"}, status_code=400)
 
     settings = load_settings()
+    content_text = resume["content_text"]
+    conn.close()
 
     def _do_analysis():
-        analysis = analyze_resume(resume["content_text"], settings)
-        update_resume_analysis(conn, resume_id, analysis)
+        analysis = analyze_resume(content_text, settings)
+        analysis_conn = get_db()
+        try:
+            update_resume_analysis(analysis_conn, resume_id, analysis)
+        finally:
+            analysis_conn.close()
         return analysis
 
     try:
         loop = asyncio.get_event_loop()
         analysis = await loop.run_in_executor(None, _do_analysis)
-        conn.close()
         return JSONResponse({"ok": True, "analysis": analysis})
     except Exception as e:
-        conn.close()
         return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
 
 
@@ -554,6 +559,29 @@ async def api_openrouter_credits():
             })
     except Exception as e:
         return JSONResponse({"ok": False, "error": str(e)[:200]})
+
+
+# ---------------------------------------------------------------------------
+# Ollama models API
+# ---------------------------------------------------------------------------
+
+@app.get("/api/ollama/models")
+async def api_ollama_models():
+    """Fetch available models from the Ollama endpoint."""
+    import httpx
+    settings = load_settings()
+    endpoint = settings.get("ollama_endpoint", "http://localhost:11434")
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            resp = await client.get(f"{endpoint}/api/tags")
+            resp.raise_for_status()
+            models = resp.json().get("models", [])
+            return JSONResponse({
+                "ok": True,
+                "models": [{"name": m["name"], "size_gb": round(m.get("size", 0) / 1e9, 1)} for m in models],
+            })
+    except Exception as e:
+        return JSONResponse({"ok": False, "error": str(e)[:200], "models": []})
 
 
 # ---------------------------------------------------------------------------
@@ -760,18 +788,23 @@ async def api_add_manual_job(request: Request):
 
     result = {"ok": True, "id": job_id, "title": title, "company": company}
 
+    conn.close()
+
     # Auto-score if requested
     if body.get("auto_score", True):
         from services.scorer import score_jobs
         settings = load_settings()
 
         def _score():
-            return score_jobs(conn, settings, job_ids=[job_id], force=True)
+            score_conn = get_db()
+            try:
+                return score_jobs(score_conn, settings, job_ids=[job_id], force=True)
+            finally:
+                score_conn.close()
 
         try:
             loop = asyncio.get_event_loop()
             score_result = await loop.run_in_executor(None, _score)
-            conn.close()
 
             # Fetch the scored job to return the score
             conn2 = get_db()
@@ -781,10 +814,7 @@ async def api_add_manual_job(request: Request):
                 result["score"] = scored_job.get("score")
                 result["fit_summary"] = scored_job.get("fit_summary")
         except Exception as e:
-            conn.close()
             result["score_error"] = str(e)
-    else:
-        conn.close()
 
     return JSONResponse(result)
 
@@ -800,6 +830,91 @@ async def api_suggest_searches():
     loop = asyncio.get_event_loop()
     results = await loop.run_in_executor(None, suggest_searches, settings, None)
     return JSONResponse(results)
+
+
+# ---------------------------------------------------------------------------
+# Resume / Cover Letter Generation
+# ---------------------------------------------------------------------------
+
+@app.post("/api/jobs/{job_id}/generate-resume")
+async def api_generate_resume(job_id: int):
+    """Generate a tailored resume for a job posting."""
+    import asyncio
+    from services.generator import generate_resume
+
+    conn = get_db()
+    job = get_job(conn, job_id)
+    conn.close()
+    if not job:
+        return JSONResponse({"error": "Job not found"}, status_code=404)
+
+    settings = load_settings()
+
+    def _gen():
+        return generate_resume(job, settings)
+
+    loop = asyncio.get_event_loop()
+    result = await loop.run_in_executor(None, _gen)
+
+    if result.get("error"):
+        return JSONResponse(result, status_code=400)
+    return JSONResponse(result)
+
+
+@app.post("/api/jobs/{job_id}/generate-cover-letter")
+async def api_generate_cover_letter(job_id: int):
+    """Generate a tailored cover letter for a job posting."""
+    import asyncio
+    from services.generator import generate_cover_letter
+
+    conn = get_db()
+    job = get_job(conn, job_id)
+    conn.close()
+    if not job:
+        return JSONResponse({"error": "Job not found"}, status_code=404)
+
+    settings = load_settings()
+
+    def _gen():
+        return generate_cover_letter(job, settings)
+
+    loop = asyncio.get_event_loop()
+    result = await loop.run_in_executor(None, _gen)
+
+    if result.get("error"):
+        return JSONResponse(result, status_code=400)
+    return JSONResponse(result)
+
+
+@app.get("/api/jobs/{job_id}/download/{doc_type}")
+async def api_download_doc(job_id: int, doc_type: str):
+    """Download a generated resume or cover letter as .docx."""
+    if doc_type not in ("resume", "cover"):
+        return JSONResponse({"error": "Invalid doc type"}, status_code=400)
+
+    conn = get_db()
+    job = get_job(conn, job_id)
+    conn.close()
+    if not job:
+        return JSONResponse({"error": "Job not found"}, status_code=404)
+
+    field = "resume_path" if doc_type == "resume" else "cover_letter_path"
+    path = job.get(field)
+    if not path or not os.path.exists(path):
+        return JSONResponse({"error": f"No {doc_type} generated yet"}, status_code=404)
+
+    # Build a nice filename: John_Burks_Resume_CompanyName.docx
+    company = (job.get("company") or "Unknown").replace(" ", "_")[:30]
+    if doc_type == "resume":
+        download_name = f"John_Burks_Resume_{company}.docx"
+    else:
+        download_name = f"John_Burks_CoverLetter_{company}.docx"
+
+    return FileResponse(
+        path,
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        filename=download_name,
+    )
 
 
 # ---------------------------------------------------------------------------

@@ -43,9 +43,10 @@ build/
 *.db-wal
 *.db-shm
 
-# Resumes & Cover Letters (personal documents)
+# Resumes, Cover Letters, Generated Documents (personal)
 data/resumes/
 data/cover-letters/
+data/generated/
 !data/resumes/.gitkeep
 !data/cover-letters/.gitkeep
 

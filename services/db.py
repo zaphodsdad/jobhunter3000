@@ -163,16 +163,22 @@ def get_jobs(conn: sqlite3.Connection, status: str = None, source: str = None,
     where_clause = " AND ".join(where_parts) if where_parts else "1=1"
 
     # Whitelist sort columns
-    valid_sorts = {"created_at", "score", "title", "company", "status", "applied_date"}
+    valid_sorts = {"created_at", "score", "title", "company", "status", "location"}
     if sort not in valid_sorts:
         sort = "created_at"
     if order not in ("asc", "desc"):
         order = "desc"
 
+    # Push NULLs to bottom regardless of sort direction
+    if sort == "score":
+        order_clause = f"CASE WHEN score IS NULL THEN 1 ELSE 0 END, score {order}"
+    else:
+        order_clause = f"{sort} {order}"
+
     query = f"""
         SELECT * FROM jobs
         WHERE {where_clause}
-        ORDER BY {sort} {order}
+        ORDER BY {order_clause}
         LIMIT ? OFFSET ?
     """
     params.extend([limit, offset])
@@ -209,7 +215,8 @@ def update_job(conn: sqlite3.Connection, job_id: int, data: dict) -> bool:
     allowed = {
         "title", "company", "location", "industry", "url", "description",
         "salary_text", "salary_min", "salary_max", "status", "notes",
-        "resume_used", "contact_name", "contact_email", "contact_title",
+        "resume_used", "resume_path", "cover_letter_path",
+        "contact_name", "contact_email", "contact_title",
         "score", "score_details", "pros", "cons", "fit_summary",
         "applied_date", "followed_up_at",
     }

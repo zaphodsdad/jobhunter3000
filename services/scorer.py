@@ -8,6 +8,25 @@ from services.resumes import load_candidate_profile
 from services.settings import load_settings
 
 
+def _scoring_settings(settings: dict) -> dict:
+    """Build a settings dict that routes LLM calls through the scoring model."""
+    s = dict(settings)
+    scoring_provider = s.get("scoring_provider", "")
+    scoring_model = s.get("scoring_model", "")
+    if scoring_provider:
+        s["llm_provider"] = scoring_provider
+    if scoring_model:
+        # Set the model for whichever provider we're using
+        provider = s.get("llm_provider", "openrouter")
+        if provider == "openrouter":
+            s["openrouter_model"] = scoring_model
+        elif provider == "google":
+            s["google_model"] = scoring_model
+        elif provider == "ollama":
+            s["ollama_model"] = scoring_model
+    return s
+
+
 def score_job(job: dict, settings: dict, profile: dict = None) -> dict:
     """Score a single job against the candidate profile. Returns score dict."""
     if not profile:
@@ -62,6 +81,7 @@ Skills: {', '.join(profile.get('all_skills', [])[:20])}
 Industries: {', '.join(profile.get('industries', []))}
 Target Roles: {', '.join(profile.get('target_roles', []))}
 Unique Value: {profile.get('unique_value', '')}
+{f"Technical Projects/Homelab: {settings.get('candidate_technical_projects', '')}" if settings.get('candidate_technical_projects') else ''}
 
 SEARCH PREFERENCES:
 Preferred Location: {prefs['location']} (within {prefs['radius_miles']} miles)
@@ -82,12 +102,23 @@ SCORING GUIDE:
 - 30-49: Weak match — significant gaps or misalignment
 - 0-29: Poor match — wrong field, wrong location, or doesn't fit at all
 
+CRITICAL RULES (override the scale above):
+- If the job requires a specific professional license the candidate does NOT have (pharmacist, nurse, RN, LPN, CPA, PE, attorney, CDL, etc.), score 0-10 regardless of other factors.
+- If the job is in a completely unrelated field (healthcare clinical, legal, accounting, teaching K-12, pure software engineering), score 0-20.
+- If the job title is clearly a different profession (pharmacist, therapist, dental hygienist, sales representative, financial analyst, radiologist, etc.), score 0-15.
+- "Operations" in a job title does NOT automatically make it a match. Pharmacy Operations Manager or Clinical Operations Manager are healthcare roles, NOT operations management roles this candidate qualifies for.
+- Only score above 60 if the candidate could genuinely perform this job with their actual experience.
+- Be skeptical. When in doubt, score lower. A false positive wastes the candidate's time.
+
 Return ONLY valid JSON (no markdown fences):
 {{"score": 0, "pros": ["pro 1", "pro 2", "pro 3"], "cons": ["con 1", "con 2"], "fit_summary": "One sentence explaining the fit."}}"""
 
+    # Use the scoring-specific model (cheaper/faster than the analysis model)
+    score_settings = _scoring_settings(settings)
+
     result = llm_chat(
         [{"role": "user", "content": prompt}],
-        settings,
+        score_settings,
     )
 
     # Parse JSON

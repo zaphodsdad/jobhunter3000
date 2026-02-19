@@ -15,6 +15,9 @@ DEFAULTS = {
     "google_model": "gemini-2.0-flash",
     "ollama_endpoint": "http://localhost:11434",
     "ollama_model": "qwen2.5-coder:32b",
+    # Scoring uses a separate (cheaper/faster) model config
+    "scoring_provider": "ollama",              # defaults to free local Ollama
+    "scoring_model": "qwen2.5-coder:32b",     # fast enough for JSON scoring
     "pushover_user_key": "",
     "pushover_api_token": "",
     "notify_threshold": 60,
@@ -71,6 +74,32 @@ DEFAULTS = {
         "security clearance required",
         "commission only",
         "CDL required",
+        "CDL class A",
+        "CDL class B",
+        "registered nurse",
+        "licensed practical nurse",
+        "RN required",
+        "LPN required",
+        "BSN required",
+        "nursing license",
+        "pharmacist",
+        "PharmD",
+        "pharmacy license",
+        "dental hygienist",
+        "dental assistant",
+        "veterinary",
+        "licensed therapist",
+        "licensed counselor",
+        "CPA required",
+        "law degree",
+        "JD required",
+        "bar admission",
+        "teaching certificate",
+        "medical degree",
+        "medical license",
+        "board certified",
+        "CISSP required",
+        "PMP required",
     ],
     "max_days_old": 14,
     # Candidate search preferences (Dossier page)
@@ -86,6 +115,7 @@ DEFAULTS = {
     "candidate_nice_to_haves": [],          # boost score if job mentions these
     "candidate_willing_to_travel": 10,      # max travel percentage
     "candidate_elevator_pitch": "",         # short pitch for cover letters / outreach
+    "candidate_technical_projects": "",     # homelab, infrastructure, side projects (freeform)
 }
 
 

@@ -687,7 +687,10 @@
             if (data.score !== undefined && data.score !== null) {
                 msg += ' — Score: ' + data.score + '/100';
             }
-            text.textContent = msg;
+            if (data.fit_summary) {
+                msg += ' — ' + data.fit_summary;
+            }
+            status.innerHTML = '<span style="color: var(--score-high);">&#10003;</span> <span>' + msg + '</span>';
 
             // Clear form
             document.getElementById('manTitle').value = '';
@@ -704,7 +707,7 @@
             if (window.refreshTopbarCredits) refreshTopbarCredits();
 
         } catch (err) {
-            text.textContent = 'Error: ' + err.message;
+            status.innerHTML = '<span style="color: #f87171;">&#10007;</span> <span>Error: ' + err.message + '</span>';
             btn.disabled = false;
             btn.innerHTML = 'Submit &amp; Score';
         }

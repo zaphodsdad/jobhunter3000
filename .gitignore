@@ -1,0 +1,35 @@
+# Secrets
+.env
+*.env.local
+secrets.*
+credentials*
+*.pem
+*.key
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+
+# Data
+*.db
+*.sqlite3
+data/resumes/*.pdf
+data/resumes/*.docx
+data/cover-letters/*.pdf
+data/cover-letters/*.docx
+
+# Logs
+logs/*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/

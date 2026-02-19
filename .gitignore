@@ -1,35 +1,84 @@
-# Secrets
+# ============================================
+# COMMANDMENT 1: No personal info to GitHub.
+# Audit every push. No exceptions.
+# ============================================
+
+# Secrets & Credentials
 .env
+.env.*
 *.env.local
 secrets.*
 credentials*
 *.pem
 *.key
+*.p12
+*.pfx
+*.secret
+api_keys*
+tokens*
+
+# Claude Code project instructions (contains personal data & keys)
+CLAUDE.md
+.claude/
+
+# MCP config (may contain server URLs/IPs)
+.mcp.json
 
 # Python
 .venv/
+venv/
+env/
 __pycache__/
 *.pyc
 *.pyo
 *.egg-info/
 dist/
 build/
+*.egg
 
-# Data
+# Database (contains scraped job data, personal notes, application status)
 *.db
 *.sqlite3
-data/resumes/*.pdf
-data/resumes/*.docx
-data/cover-letters/*.pdf
-data/cover-letters/*.docx
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Resumes & Cover Letters (personal documents)
+data/resumes/
+data/cover-letters/
+!data/resumes/.gitkeep
+!data/cover-letters/.gitkeep
+
+# Templates are OK to commit (no personal data in templates)
+!data/templates/
+
+# Config files (contain API keys, network IPs, personal search criteria)
+config.yaml
+config/*.yaml
+config/*.yml
+!config/example-config.yaml
 
 # Logs
 logs/*.log
+logs/*.txt
+
+# Generated documents
+*.pdf
+*.docx
 
 # OS
 .DS_Store
 Thumbs.db
+._*
 
 # IDE
 .vscode/
 .idea/
+*.swp
+*.swo
+*~
+
+# Syncthing
+.stfolder/
+.stignore
+.stversions/

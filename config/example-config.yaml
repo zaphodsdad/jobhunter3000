@@ -1,0 +1,39 @@
+# JobHunter3000 Configuration
+# Copy this to config.yaml and fill in your details.
+# config.yaml is gitignored — your keys and personal info stay local.
+
+schedule:
+  scrape_interval_hours: 8
+
+scoring:
+  notify_threshold: 60        # Score >= this sends a notification
+  priority_threshold: 80       # Score >= this sends a priority notification
+  model: "qwen2.5-coder:32b"  # Ollama model for scoring
+  ollama_url: "http://localhost:11434"
+
+notifications:
+  pushover_user_key: "YOUR_PUSHOVER_USER_KEY"
+  pushover_api_token: "YOUR_PUSHOVER_API_TOKEN"
+
+searches:
+  - name: "Operations Manager"
+    boards: [indeed, linkedin, simplyhired]
+    query: "operations manager"
+    location: "Your City, ST"
+    radius_miles: 30
+    salary_min: 50000
+
+  - name: "IT Infrastructure"
+    boards: [indeed, linkedin]
+    query: "IT infrastructure OR desktop support"
+    location: "Your City, ST"
+    radius_miles: 30
+    salary_min: 50000
+
+filters:
+  exclude_companies: []
+  exclude_keywords:
+    - "security clearance required"
+    - "commission only"
+  require_keywords: []
+  max_days_old: 14

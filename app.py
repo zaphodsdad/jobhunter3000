@@ -6,7 +6,7 @@ Browse: http://localhost:8001
 
 import json
 import os
-from fastapi import FastAPI, Request, Form
+from fastapi import FastAPI, Request, Form, UploadFile, File
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from typing import Optional
@@ -109,6 +109,18 @@ async def pipeline_page(request: Request):
         "request": request,
         "pipeline": pipeline,
         "rejected": rejected,
+    })
+
+
+@app.get("/resumes", response_class=HTMLResponse)
+async def resumes_page(request: Request):
+    from services.resumes import get_resumes
+    conn = get_db()
+    resumes = get_resumes(conn)
+    conn.close()
+    return templates.TemplateResponse("resumes.html", {
+        "request": request,
+        "resumes": resumes,
     })
 
 
@@ -265,6 +277,82 @@ async def api_import_spreadsheet():
     result = insert_imported_jobs(conn, jobs)
     conn.close()
     return JSONResponse(result)
+
+
+# ---------------------------------------------------------------------------
+# Resume APIs
+# ---------------------------------------------------------------------------
+
+@app.post("/api/resumes/upload")
+async def api_upload_resume(file: UploadFile = File(...)):
+    """Upload a resume file."""
+    from services.resumes import save_resume, extract_text, insert_resume
+
+    allowed = {".pdf", ".docx", ".md", ".txt"}
+    ext = os.path.splitext(file.filename or "")[1].lower()
+    if ext not in allowed:
+        return JSONResponse(
+            {"error": f"Unsupported file type: {ext}. Use PDF, DOCX, MD, or TXT."},
+            status_code=400,
+        )
+
+    contents = await file.read()
+    metadata = save_resume(contents, file.filename)
+    content_text = extract_text(metadata["file_path"], metadata["file_type"])
+
+    conn = get_db()
+    resume_id = insert_resume(conn, metadata, content_text)
+    conn.close()
+
+    return JSONResponse({"ok": True, "id": resume_id, "filename": metadata["filename"]})
+
+
+@app.post("/api/resumes/{resume_id}/analyze")
+async def api_analyze_resume(resume_id: int):
+    """Run LLM analysis on a resume."""
+    from services.resumes import get_resume, analyze_resume, update_resume_analysis
+
+    conn = get_db()
+    resume = get_resume(conn, resume_id)
+    if not resume:
+        conn.close()
+        return JSONResponse({"error": "Resume not found"}, status_code=404)
+
+    if not resume["content_text"]:
+        conn.close()
+        return JSONResponse({"error": "No text content extracted from resume"}, status_code=400)
+
+    settings = load_settings()
+    try:
+        analysis = analyze_resume(resume["content_text"], settings)
+        update_resume_analysis(conn, resume_id, analysis)
+        conn.close()
+        return JSONResponse({"ok": True, "analysis": analysis})
+    except Exception as e:
+        conn.close()
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+
+@app.get("/api/resumes")
+async def api_list_resumes():
+    """List all resumes."""
+    from services.resumes import get_resumes
+    conn = get_db()
+    resumes = get_resumes(conn)
+    conn.close()
+    return JSONResponse(resumes)
+
+
+@app.delete("/api/resumes/{resume_id}")
+async def api_delete_resume(resume_id: int):
+    """Delete a resume."""
+    from services.resumes import delete_resume
+    conn = get_db()
+    success = delete_resume(conn, resume_id)
+    conn.close()
+    if not success:
+        return JSONResponse({"error": "Resume not found"}, status_code=404)
+    return JSONResponse({"ok": True})
 
 
 # ---------------------------------------------------------------------------

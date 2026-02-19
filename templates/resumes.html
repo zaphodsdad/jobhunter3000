@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arsenal — JobHunter3000</title>
+    <style>
+        {% include 'base_styles.html' %}
+
+        /* ── Resumes-specific styles ───────────────────────── */
+
+        .topbar-brand {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            letter-spacing: -0.5px;
+        }
+
+        .topbar-brand span {
+            color: var(--accent-primary);
+        }
+
+        .topbar-right {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            font-family: 'Courier New', monospace;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .content-area {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 1.5rem 2rem 3rem;
+        }
+
+        .page-header {
+            margin-bottom: 1.5rem;
+        }
+
+        .page-header h1 {
+            color: var(--text-primary);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            font-size: 0.85rem;
+            margin: 0 0 0.25rem 0;
+        }
+
+        .page-header h1::before {
+            content: '//';
+            color: var(--accent-primary);
+            margin-right: 0.5rem;
+        }
+
+        .page-header p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin: 0;
+        }
+
+        /* ── Upload Zone ─────────────────────────────────── */
+
+        .upload-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 24px;
+        }
+
+        .upload-card h2 {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin: 0 0 16px 0;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .upload-card h2::before {
+            content: '▸ ';
+            color: var(--accent-primary);
+        }
+
+        .drop-zone {
+            border: 2px dashed var(--border);
+            border-radius: 8px;
+            padding: 40px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: border-color 0.2s, background 0.2s;
+            position: relative;
+        }
+
+        .drop-zone:hover,
+        .drop-zone.drag-over {
+            border-color: var(--accent-primary);
+            background: rgba(34, 211, 238, 0.04);
+        }
+
+        .drop-zone-icon {
+            font-size: 2.5rem;
+            margin-bottom: 12px;
+            opacity: 0.5;
+        }
+
+        .drop-zone-text {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-bottom: 4px;
+        }
+
+        .drop-zone-text strong {
+            color: var(--accent-primary);
+        }
+
+        .drop-zone-hint {
+            color: var(--text-muted);
+            font-size: 0.78rem;
+        }
+
+        .drop-zone input[type="file"] {
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        .upload-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-top: 16px;
+        }
+
+        .upload-filename {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .upload-filename.has-file {
+            color: var(--accent-primary);
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 18px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.15s, opacity 0.15s;
+            font-family: var(--font-stack);
+        }
+
+        .btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .btn-primary {
+            background: var(--accent-primary);
+            color: #0f1117;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: #06b6d4;
+        }
+
+        .btn-danger {
+            background: transparent;
+            color: #ef4444;
+            border: 1px solid #3f1a1a;
+        }
+
+        .btn-danger:hover:not(:disabled) {
+            background: rgba(239, 68, 68, 0.1);
+            border-color: #ef4444;
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: var(--text-secondary);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            border-color: var(--accent-primary);
+            color: var(--accent-primary);
+        }
+
+        .upload-message {
+            font-size: 0.82rem;
+            margin-top: 10px;
+            padding: 8px 12px;
+            border-radius: 6px;
+            display: none;
+        }
+
+        .upload-message.success {
+            display: block;
+            background: rgba(74, 222, 128, 0.1);
+            color: #4ade80;
+            border: 1px solid rgba(74, 222, 128, 0.2);
+        }
+
+        .upload-message.error {
+            display: block;
+            background: rgba(239, 68, 68, 0.1);
+            color: #ef4444;
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+
+        /* ── Resume Cards ────────────────────────────────── */
+
+        .resumes-list {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .resume-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 20px;
+            transition: border-color 0.2s;
+        }
+
+        .resume-card:hover {
+            border-color: #3a3d4a;
+        }
+
+        .resume-card-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .resume-card-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .resume-card-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin: 0 0 6px 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .resume-card-title .filename {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .file-type-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            font-size: 0.68rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            border-radius: 4px;
+            flex-shrink: 0;
+        }
+
+        .file-type-badge.pdf {
+            background: rgba(239, 68, 68, 0.15);
+            color: #ef4444;
+        }
+
+        .file-type-badge.docx {
+            background: rgba(59, 130, 246, 0.15);
+            color: #3b82f6;
+        }
+
+        .file-type-badge.md {
+            background: rgba(168, 85, 247, 0.15);
+            color: #a855f7;
+        }
+
+        .file-type-badge.txt {
+            background: rgba(107, 114, 128, 0.15);
+            color: #9ca3af;
+        }
+
+        .resume-card-meta {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+        }
+
+        .resume-card-actions {
+            display: flex;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+
+        /* ── Analysis Section ────────────────────────────── */
+
+        .analysis-section {
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid var(--border);
+        }
+
+        .analysis-not-ready {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+
+        .analysis-not-ready span {
+            flex: 1;
+        }
+
+        .analysis-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .analysis-group {
+            min-width: 0;
+        }
+
+        .analysis-group-label {
+            font-size: 0.72rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+        }
+
+        .analysis-summary {
+            grid-column: 1 / -1;
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+            line-height: 1.5;
+            font-style: italic;
+        }
+
+        .analysis-experience {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+        }
+
+        .analysis-experience strong {
+            color: var(--text-primary);
+        }
+
+        .pills {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .pill {
+            display: inline-block;
+            padding: 3px 10px;
+            font-size: 0.72rem;
+            font-weight: 600;
+            border-radius: 20px;
+            white-space: nowrap;
+        }
+
+        .pill-green {
+            background: rgba(74, 222, 128, 0.12);
+            color: #4ade80;
+        }
+
+        .pill-cyan {
+            background: rgba(34, 211, 238, 0.12);
+            color: #22d3ee;
+        }
+
+        .pill-red {
+            background: rgba(239, 68, 68, 0.1);
+            color: #888;
+        }
+
+        .pill-muted {
+            background: rgba(107, 114, 128, 0.12);
+            color: #9ca3af;
+        }
+
+        /* ── Loading Spinner ─────────────────────────────── */
+
+        .spinner {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border: 2px solid var(--border);
+            border-top-color: var(--accent-primary);
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* ── Empty State ─────────────────────────────────── */
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-muted);
+        }
+
+        .empty-state-icon {
+            font-size: 3rem;
+            opacity: 0.3;
+            margin-bottom: 16px;
+        }
+
+        .empty-state h3 {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+            margin: 0 0 8px 0;
+        }
+
+        .empty-state p {
+            font-size: 0.9rem;
+            margin: 0;
+        }
+
+        /* ── Responsive ──────────────────────────────────── */
+
+        @media (max-width: 768px) {
+            .content-area {
+                padding: 1rem;
+            }
+
+            .topbar-brand {
+                font-size: 1.2rem;
+            }
+
+            .analysis-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .resume-card-header {
+                flex-direction: column;
+            }
+
+            .resume-card-actions {
+                align-self: flex-start;
+            }
+
+            .drop-zone {
+                padding: 30px 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ── Topbar ──────────────────────────────────────────── -->
+    <header class="topbar">
+        <div class="topbar-brand">Job<span>Hunter</span>3000</div>
+        <div class="topbar-right">Arsenal</div>
+    </header>
+
+    <!-- ── Navigation ──────────────────────────────────────── -->
+    {% set active = 'resumes' %}
+    {% include 'nav.html' %}
+
+    <!-- ── Content ─────────────────────────────────────────── -->
+    <main class="content-area">
+
+        <!-- Page Header -->
+        <div class="page-header">
+            <h1>Resume Arsenal</h1>
+            <p>Upload, analyze, and manage your resumes. The right weapon for the right target.</p>
+        </div>
+
+        <!-- ════════════════════════════════════════════════════
+             Upload Section
+             ════════════════════════════════════════════════════ -->
+        <div class="upload-card">
+            <h2>Upload Resume</h2>
+
+            <div class="drop-zone" id="dropZone">
+                <input type="file" id="fileInput" accept=".pdf,.docx,.md,.txt" />
+                <div class="drop-zone-icon">&#128196;</div>
+                <div class="drop-zone-text">
+                    Drag &amp; drop a file here or <strong>click to browse</strong>
+                </div>
+                <div class="drop-zone-hint">
+                    Accepts PDF, DOCX, Markdown, or plain text
+                </div>
+            </div>
+
+            <div class="upload-actions">
+                <div class="upload-filename" id="uploadFilename">No file selected</div>
+                <button class="btn btn-primary" id="uploadBtn" disabled onclick="uploadResume()">
+                    Upload
+                </button>
+            </div>
+
+            <div class="upload-message" id="uploadMessage"></div>
+        </div>
+
+        <!-- ════════════════════════════════════════════════════
+             Resumes List
+             ════════════════════════════════════════════════════ -->
+        {% if resumes %}
+        <div class="resumes-list">
+            {% for resume in resumes %}
+            <div class="resume-card"
+                 id="resume-{{ resume.id }}"
+                 data-analysis="{{ resume.analysis | e if resume.analysis else '' }}"
+                 data-bestfor="{{ resume.best_for | e if resume.best_for else '' }}">
+
+                <div class="resume-card-header">
+                    <div class="resume-card-info">
+                        <div class="resume-card-title">
+                            <span class="filename">{{ resume.original_name }}</span>
+                            {% set ftype = resume.file_type | lower if resume.file_type else 'txt' %}
+                            <span class="file-type-badge {{ ftype }}">{{ ftype | upper }}</span>
+                        </div>
+                        <div class="resume-card-meta">
+                            Uploaded {{ resume.uploaded_at }}
+                        </div>
+                    </div>
+                    <div class="resume-card-actions">
+                        <button class="btn btn-secondary analyze-btn"
+                                id="analyze-btn-{{ resume.id }}"
+                                onclick="analyzeResume({{ resume.id }})">
+                            Analyze
+                        </button>
+                        <button class="btn btn-danger"
+                                onclick="deleteResume({{ resume.id }}, '{{ resume.original_name | e }}')">
+                            Delete
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Analysis Section (populated by JS from data attributes) -->
+                <div class="analysis-section" id="analysis-{{ resume.id }}">
+                    {% if resume.analysis %}
+                    <div class="analysis-placeholder">Loading analysis...</div>
+                    {% else %}
+                    <div class="analysis-not-ready">
+                        <span>Not analyzed yet. Run analysis to discover strengths, target roles, and gaps.</span>
+                    </div>
+                    {% endif %}
+                </div>
+
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-state-icon">&#128203;</div>
+            <h3>No resumes uploaded yet</h3>
+            <p>Upload your resumes to get started. Each one will be analyzed for strengths, target roles, and gaps.</p>
+        </div>
+        {% endif %}
+
+    </main>
+
+    <!-- ── Chat Widget ─────────────────────────────────────── -->
+    {% include 'chat_widget.html' ignore missing %}
+
+    <!-- ══════════════════════════════════════════════════════
+         JavaScript
+         ══════════════════════════════════════════════════════ -->
+    <script>
+        // ── DOM refs ──────────────────────────────────────────
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const uploadBtn = document.getElementById('uploadBtn');
+        const uploadFilename = document.getElementById('uploadFilename');
+        const uploadMessage = document.getElementById('uploadMessage');
+
+        // ── Drag & Drop ───────────────────────────────────────
+        ['dragenter', 'dragover'].forEach(evt => {
+            dropZone.addEventListener(evt, e => {
+                e.preventDefault();
+                e.stopPropagation();
+                dropZone.classList.add('drag-over');
+            });
+        });
+
+        ['dragleave', 'drop'].forEach(evt => {
+            dropZone.addEventListener(evt, e => {
+                e.preventDefault();
+                e.stopPropagation();
+                dropZone.classList.remove('drag-over');
+            });
+        });
+
+        dropZone.addEventListener('drop', e => {
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                fileInput.files = files;
+                handleFileSelected();
+            }
+        });
+
+        fileInput.addEventListener('change', handleFileSelected);
+
+        function handleFileSelected() {
+            const file = fileInput.files[0];
+            if (file) {
+                uploadFilename.textContent = file.name;
+                uploadFilename.classList.add('has-file');
+                uploadBtn.disabled = false;
+                hideMessage();
+            } else {
+                uploadFilename.textContent = 'No file selected';
+                uploadFilename.classList.remove('has-file');
+                uploadBtn.disabled = true;
+            }
+        }
+
+        // ── Upload ────────────────────────────────────────────
+        async function uploadResume() {
+            const file = fileInput.files[0];
+            if (!file) return;
+
+            uploadBtn.disabled = true;
+            uploadBtn.innerHTML = '<span class="spinner"></span> Uploading...';
+            hideMessage();
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const resp = await fetch('/api/resumes/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!resp.ok) {
+                    const err = await resp.json().catch(() => ({}));
+                    throw new Error(err.detail || err.error || `Upload failed (${resp.status})`);
+                }
+
+                showMessage('success', 'Resume uploaded successfully. Reloading...');
+                setTimeout(() => window.location.reload(), 800);
+            } catch (err) {
+                showMessage('error', err.message);
+                uploadBtn.disabled = false;
+                uploadBtn.innerHTML = 'Upload';
+            }
+        }
+
+        // ── Analyze ───────────────────────────────────────────
+        async function analyzeResume(id) {
+            const btn = document.getElementById('analyze-btn-' + id);
+            const section = document.getElementById('analysis-' + id);
+
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span> Analyzing...';
+
+            try {
+                const resp = await fetch('/api/resumes/' + id + '/analyze', {
+                    method: 'POST'
+                });
+
+                if (!resp.ok) {
+                    const err = await resp.json().catch(() => ({}));
+                    throw new Error(err.detail || err.error || `Analysis failed (${resp.status})`);
+                }
+
+                // Reload to show fresh analysis
+                window.location.reload();
+            } catch (err) {
+                btn.disabled = false;
+                btn.innerHTML = 'Analyze';
+                section.innerHTML = '<div class="analysis-not-ready"><span style="color:#ef4444;">Analysis failed: ' +
+                    escapeHtml(err.message) + '</span></div>';
+            }
+        }
+
+        // ── Delete ────────────────────────────────────────────
+        async function deleteResume(id, name) {
+            if (!confirm('Delete "' + name + '"? This cannot be undone.')) return;
+
+            try {
+                const resp = await fetch('/api/resumes/' + id, {
+                    method: 'DELETE'
+                });
+
+                if (!resp.ok) {
+                    const err = await resp.json().catch(() => ({}));
+                    throw new Error(err.detail || err.error || `Delete failed (${resp.status})`);
+                }
+
+                // Remove card with a quick fade
+                const card = document.getElementById('resume-' + id);
+                if (card) {
+                    card.style.transition = 'opacity 0.3s';
+                    card.style.opacity = '0';
+                    setTimeout(() => {
+                        card.remove();
+                        // If no more cards, show empty state
+                        const list = document.querySelector('.resumes-list');
+                        if (list && list.children.length === 0) {
+                            window.location.reload();
+                        }
+                    }, 300);
+                }
+            } catch (err) {
+                alert('Failed to delete resume: ' + err.message);
+            }
+        }
+
+        // ── Message helpers ───────────────────────────────────
+        function showMessage(type, text) {
+            uploadMessage.className = 'upload-message ' + type;
+            uploadMessage.textContent = text;
+        }
+
+        function hideMessage() {
+            uploadMessage.className = 'upload-message';
+            uploadMessage.textContent = '';
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // ── Render analysis from data attributes ──────────────
+        function renderAnalysis() {
+            document.querySelectorAll('.resume-card').forEach(card => {
+                const raw = card.getAttribute('data-analysis');
+                if (!raw) return;
+
+                const section = card.querySelector('.analysis-section');
+                if (!section) return;
+
+                let analysis;
+                try {
+                    analysis = JSON.parse(raw);
+                } catch (e) {
+                    section.innerHTML = '<div class="analysis-not-ready"><span>Could not parse analysis data.</span></div>';
+                    return;
+                }
+
+                let bestFor = [];
+                const bestForRaw = card.getAttribute('data-bestfor');
+                if (bestForRaw) {
+                    try { bestFor = JSON.parse(bestForRaw); } catch(e) {}
+                }
+
+                let html = '<div class="analysis-grid">';
+
+                // Strengths
+                if (analysis.strengths && analysis.strengths.length) {
+                    html += '<div class="analysis-group">';
+                    html += '<div class="analysis-group-label">Strengths</div>';
+                    html += '<div class="pills">';
+                    analysis.strengths.forEach(s => {
+                        html += '<span class="pill pill-green">' + escapeHtml(s) + '</span>';
+                    });
+                    html += '</div></div>';
+                }
+
+                // Target Roles / Best For
+                const roles = bestFor.length ? bestFor : (analysis.target_roles || []);
+                if (roles.length) {
+                    html += '<div class="analysis-group">';
+                    html += '<div class="analysis-group-label">Target Roles</div>';
+                    html += '<div class="pills">';
+                    roles.forEach(r => {
+                        html += '<span class="pill pill-cyan">' + escapeHtml(r) + '</span>';
+                    });
+                    html += '</div></div>';
+                }
+
+                // Experience Level
+                if (analysis.experience_level) {
+                    html += '<div class="analysis-group">';
+                    html += '<div class="analysis-group-label">Experience Level</div>';
+                    html += '<div class="analysis-experience"><strong>' + escapeHtml(analysis.experience_level) + '</strong></div>';
+                    html += '</div>';
+                }
+
+                // Key Skills
+                if (analysis.key_skills && analysis.key_skills.length) {
+                    html += '<div class="analysis-group">';
+                    html += '<div class="analysis-group-label">Key Skills</div>';
+                    html += '<div class="pills">';
+                    analysis.key_skills.forEach(s => {
+                        html += '<span class="pill pill-muted">' + escapeHtml(s) + '</span>';
+                    });
+                    html += '</div></div>';
+                }
+
+                // Gaps
+                if (analysis.gaps && analysis.gaps.length) {
+                    html += '<div class="analysis-group">';
+                    html += '<div class="analysis-group-label">Gaps</div>';
+                    html += '<div class="pills">';
+                    analysis.gaps.forEach(g => {
+                        html += '<span class="pill pill-red">' + escapeHtml(g) + '</span>';
+                    });
+                    html += '</div></div>';
+                }
+
+                // Summary
+                if (analysis.summary) {
+                    html += '<div class="analysis-summary">"' + escapeHtml(analysis.summary) + '"</div>';
+                }
+
+                html += '</div>';
+                section.innerHTML = html;
+            });
+        }
+
+        // Run on load
+        renderAnalysis();
+    </script>
+</body>
+</html>

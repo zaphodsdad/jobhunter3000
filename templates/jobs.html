@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jobs — JobHunter3000</title>
+  {% include 'base_styles.html' %}
+  <style>
+    /* ── Filter Bar ─────────────────────────────────────── */
+    .filter-bar {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 0.75rem 1rem;
+      background: #0c0e14;
+      border: 1px solid #1a1f2e;
+      border-radius: 8px;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    .filter-bar label {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #6b7280;
+      margin-right: 0.25rem;
+    }
+
+    .filter-bar select {
+      background: #111318;
+      color: #e2e8f0;
+      border: 1px solid #2a2f3e;
+      border-radius: 6px;
+      padding: 0.4rem 0.6rem;
+      font-size: 0.85rem;
+      cursor: pointer;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .filter-bar select:hover,
+    .filter-bar select:focus {
+      border-color: #00e5ff;
+    }
+
+    .filter-count {
+      margin-left: auto;
+      font-size: 0.85rem;
+      color: #6b7280;
+    }
+
+    .filter-count strong {
+      color: #e2e8f0;
+    }
+
+    /* ── Jobs Table ─────────────────────────────────────── */
+    .jobs-table-wrap {
+      overflow-x: auto;
+    }
+
+    .jobs-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+
+    .jobs-table thead th {
+      text-align: left;
+      padding: 0.65rem 0.75rem;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #6b7280;
+      border-bottom: 1px solid #1a1f2e;
+      white-space: nowrap;
+      user-select: none;
+    }
+
+    .jobs-table tbody tr.job-row {
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .jobs-table tbody tr.job-row:hover {
+      background: rgba(0, 229, 255, 0.04);
+    }
+
+    .jobs-table tbody tr.job-row td {
+      padding: 0.6rem 0.75rem;
+      border-bottom: 1px solid #111318;
+      vertical-align: middle;
+    }
+
+    .jobs-table tbody tr.job-row.expanded {
+      background: rgba(0, 229, 255, 0.06);
+    }
+
+    .jobs-table tbody tr.job-row.expanded td {
+      border-bottom: none;
+    }
+
+    /* ── Score Badge ────────────────────────────────────── */
+    .score-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 2.4rem;
+      padding: 0.2rem 0.5rem;
+      border-radius: 6px;
+      font-weight: 700;
+      font-size: 0.85rem;
+      text-align: center;
+    }
+
+    .score-badge.score-high {
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    .score-badge.score-good {
+      background: rgba(0, 229, 255, 0.12);
+      color: #00e5ff;
+      border: 1px solid rgba(0, 229, 255, 0.25);
+    }
+
+    .score-badge.score-mid {
+      background: rgba(245, 158, 11, 0.12);
+      color: #fbbf24;
+      border: 1px solid rgba(245, 158, 11, 0.25);
+    }
+
+    .score-badge.score-low {
+      background: rgba(107, 114, 128, 0.12);
+      color: #6b7280;
+      border: 1px solid rgba(107, 114, 128, 0.25);
+    }
+
+    /* ── Status Badge ──────────────────────────────────── */
+    .status-badge {
+      display: inline-block;
+      padding: 0.15rem 0.55rem;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: capitalize;
+      white-space: nowrap;
+    }
+
+    .status-badge.status-new          { background: rgba(99, 102, 241, 0.15); color: #818cf8; }
+    .status-badge.status-interested   { background: rgba(0, 229, 255, 0.12);  color: #00e5ff; }
+    .status-badge.status-applied      { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
+    .status-badge.status-interviewing { background: rgba(16, 185, 129, 0.15); color: #34d399; }
+    .status-badge.status-offer        { background: rgba(168, 85, 247, 0.15); color: #c084fc; }
+    .status-badge.status-rejected     { background: rgba(239, 68, 68, 0.12);  color: #f87171; }
+    .status-badge.status-archived     { background: rgba(107, 114, 128, 0.12); color: #6b7280; }
+
+    /* ── Detail Row ────────────────────────────────────── */
+    tr.detail-row {
+      display: none;
+    }
+
+    tr.detail-row.visible {
+      display: table-row;
+    }
+
+    tr.detail-row td {
+      padding: 0 0.75rem 1rem 0.75rem;
+      border-bottom: 1px solid #1a1f2e;
+      background: rgba(0, 229, 255, 0.02);
+    }
+
+    .detail-inner {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      padding: 1rem;
+      background: #0c0e14;
+      border-radius: 8px;
+      border: 1px solid #1a1f2e;
+    }
+
+    .detail-inner .detail-full {
+      grid-column: 1 / -1;
+    }
+
+    .detail-section h4 {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #6b7280;
+      margin: 0 0 0.4rem 0;
+    }
+
+    .detail-section p,
+    .detail-section ul {
+      margin: 0;
+      font-size: 0.85rem;
+      color: #cbd5e1;
+      line-height: 1.5;
+    }
+
+    .detail-section ul {
+      padding-left: 1.2rem;
+    }
+
+    .detail-section ul li {
+      margin-bottom: 0.2rem;
+    }
+
+    .detail-section a {
+      color: #00e5ff;
+      text-decoration: none;
+    }
+
+    .detail-section a:hover {
+      text-decoration: underline;
+    }
+
+    .detail-description {
+      max-height: 200px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      font-size: 0.82rem;
+      color: #94a3b8;
+      padding: 0.5rem;
+      background: #111318;
+      border-radius: 6px;
+      border: 1px solid #1a1f2e;
+    }
+
+    .notes-edit {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+    }
+
+    .notes-edit textarea {
+      flex: 1;
+      background: #111318;
+      color: #e2e8f0;
+      border: 1px solid #2a2f3e;
+      border-radius: 6px;
+      padding: 0.4rem 0.6rem;
+      font-size: 0.82rem;
+      resize: vertical;
+      min-height: 2.4rem;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .notes-edit textarea:focus {
+      border-color: #00e5ff;
+    }
+
+    .notes-edit button {
+      align-self: flex-end;
+      background: rgba(0, 229, 255, 0.1);
+      color: #00e5ff;
+      border: 1px solid rgba(0, 229, 255, 0.25);
+      border-radius: 6px;
+      padding: 0.4rem 0.8rem;
+      font-size: 0.8rem;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.2s;
+    }
+
+    .notes-edit button:hover {
+      background: rgba(0, 229, 255, 0.2);
+    }
+
+    /* ── Status Inline Select ──────────────────────────── */
+    .status-select {
+      background: #111318;
+      color: #e2e8f0;
+      border: 1px solid #2a2f3e;
+      border-radius: 6px;
+      padding: 0.25rem 0.4rem;
+      font-size: 0.78rem;
+      cursor: pointer;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .status-select:hover,
+    .status-select:focus {
+      border-color: #00e5ff;
+    }
+
+    /* ── Column Styling ────────────────────────────────── */
+    .job-title-cell {
+      font-weight: 600;
+      color: #e2e8f0;
+    }
+
+    .job-company-cell {
+      color: #94a3b8;
+    }
+
+    .job-location-cell {
+      color: #6b7280;
+      font-size: 0.82rem;
+    }
+
+    .job-date-cell {
+      color: #6b7280;
+      font-size: 0.82rem;
+      white-space: nowrap;
+    }
+
+    /* ── Pros / Cons ───────────────────────────────────── */
+    .pro-item { color: #34d399; }
+    .con-item { color: #f87171; }
+
+    /* ── Empty State ───────────────────────────────────── */
+    .empty-state {
+      text-align: center;
+      padding: 3rem 1rem;
+      color: #6b7280;
+    }
+
+    .empty-state h3 {
+      color: #94a3b8;
+      margin-bottom: 0.5rem;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ── Topbar ──────────────────────────────────────── -->
+  <header class="topbar">
+    <div class="topbar-brand">Job<span>Hunter</span>3000</div>
+    <div class="topbar-right">Intel Report</div>
+  </header>
+
+  <!-- ── Navigation ──────────────────────────────────── -->
+  {% set active = 'jobs' %}
+  {% include 'nav.html' %}
+
+  <!-- ── Content ─────────────────────────────────────── -->
+  <main class="content">
+
+    <!-- Filter Bar -->
+    <div class="filter-bar">
+      <label for="filter-status">Status</label>
+      <select id="filter-status" onchange="applyFilters()">
+        <option value="">All Statuses</option>
+        {% for s in statuses %}
+        <option value="{{ s }}" {% if current_status == s %}selected{% endif %}>{{ s | capitalize }}</option>
+        {% endfor %}
+      </select>
+
+      <label for="filter-source">Source</label>
+      <select id="filter-source" onchange="applyFilters()">
+        <option value="">All Sources</option>
+        {% for src in sources %}
+        <option value="{{ src }}" {% if current_source == src %}selected{% endif %}>{{ src | capitalize }}</option>
+        {% endfor %}
+      </select>
+
+      <label for="filter-sort">Sort</label>
+      <select id="filter-sort" onchange="applyFilters()">
+        <option value="score_desc" {% if request.query_params.get('sort', 'score') == 'score' and request.query_params.get('order', 'desc') == 'desc' %}selected{% endif %}>Score (High &rarr; Low)</option>
+        <option value="date_desc" {% if request.query_params.get('sort') == 'date' and request.query_params.get('order', 'desc') == 'desc' %}selected{% endif %}>Date (Newest)</option>
+        <option value="company_asc" {% if request.query_params.get('sort') == 'company' and request.query_params.get('order') == 'asc' %}selected{% endif %}>Company (A &rarr; Z)</option>
+        <option value="title_asc" {% if request.query_params.get('sort') == 'title' and request.query_params.get('order') == 'asc' %}selected{% endif %}>Title (A &rarr; Z)</option>
+      </select>
+
+      <span class="filter-count">Showing <strong>{{ jobs | length }}</strong> job{{ 's' if jobs | length != 1 else '' }}</span>
+    </div>
+
+    <!-- Jobs Table -->
+    {% if jobs | length > 0 %}
+    <div class="jobs-table-wrap">
+      <table class="jobs-table">
+        <thead>
+          <tr>
+            <th>Score</th>
+            <th>Title</th>
+            <th>Company</th>
+            <th>Location</th>
+            <th>Status</th>
+            <th>Date</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for job in jobs %}
+          <tr class="job-row" data-job-id="{{ job.id }}" onclick="toggleDetail(this, event)">
+            <td>
+              {% if job.score is not none %}
+              <span class="score-badge {% if job.score >= 80 %}score-high{% elif job.score >= 60 %}score-good{% elif job.score >= 40 %}score-mid{% else %}score-low{% endif %}">
+                {{ job.score }}
+              </span>
+              {% else %}
+              <span class="score-badge score-low">&mdash;</span>
+              {% endif %}
+            </td>
+            <td class="job-title-cell">{{ job.title }}</td>
+            <td class="job-company-cell">{{ job.company or '—' }}</td>
+            <td class="job-location-cell">{{ job.location or '—' }}</td>
+            <td>
+              <span class="status-badge status-{{ job.status or 'new' }}">{{ (job.status or 'new') | capitalize }}</span>
+            </td>
+            <td class="job-date-cell">
+              {% if job.applied_date %}
+                {{ job.applied_date }}
+              {% elif job.created_at %}
+                {{ job.created_at }}
+              {% else %}
+                &mdash;
+              {% endif %}
+            </td>
+            <td onclick="event.stopPropagation()">
+              <select class="status-select" data-job-id="{{ job.id }}" onchange="changeStatus(this)">
+                <option value="new" {% if (job.status or 'new') == 'new' %}selected{% endif %}>New</option>
+                <option value="interested" {% if job.status == 'interested' %}selected{% endif %}>Interested</option>
+                <option value="applied" {% if job.status == 'applied' %}selected{% endif %}>Applied</option>
+                <option value="interviewing" {% if job.status == 'interviewing' %}selected{% endif %}>Interviewing</option>
+                <option value="offer" {% if job.status == 'offer' %}selected{% endif %}>Offer</option>
+                <option value="rejected" {% if job.status == 'rejected' %}selected{% endif %}>Rejected</option>
+                <option value="archived" {% if job.status == 'archived' %}selected{% endif %}>Archived</option>
+              </select>
+            </td>
+          </tr>
+
+          <!-- Detail Row (hidden by default) -->
+          <tr class="detail-row" data-detail-for="{{ job.id }}">
+            <td colspan="7">
+              <div class="detail-inner">
+
+                {% if job.description %}
+                <div class="detail-section detail-full">
+                  <h4>Description</h4>
+                  <div class="detail-description">{{ job.description }}</div>
+                </div>
+                {% endif %}
+
+                {% if job.pros %}
+                <div class="detail-section">
+                  <h4>Pros</h4>
+                  <ul>
+                    {% for pro in job.pros if pro %}
+                    <li class="pro-item">{{ pro }}</li>
+                    {% endfor %}
+                  </ul>
+                </div>
+                {% endif %}
+
+                {% if job.cons %}
+                <div class="detail-section">
+                  <h4>Cons</h4>
+                  <ul>
+                    {% for con in job.cons if con %}
+                    <li class="con-item">{{ con }}</li>
+                    {% endfor %}
+                  </ul>
+                </div>
+                {% endif %}
+
+                {% if job.fit_summary %}
+                <div class="detail-section detail-full">
+                  <h4>Fit Summary</h4>
+                  <p>{{ job.fit_summary }}</p>
+                </div>
+                {% endif %}
+
+                {% if job.resume_used %}
+                <div class="detail-section">
+                  <h4>Resume Used</h4>
+                  <p>{{ job.resume_used }}</p>
+                </div>
+                {% endif %}
+
+                {% if job.url and not job.url.startswith('import://') %}
+                <div class="detail-section">
+                  <h4>Original Posting</h4>
+                  <p><a href="{{ job.url }}" target="_blank" rel="noopener noreferrer">View on {{ job.source | capitalize if job.source else 'source' }} &rarr;</a></p>
+                </div>
+                {% endif %}
+
+                <div class="detail-section detail-full">
+                  <h4>Notes</h4>
+                  <div class="notes-edit">
+                    <textarea id="notes-{{ job.id }}" placeholder="Add notes...">{{ job.notes or '' }}</textarea>
+                    <button onclick="saveNotes({{ job.id }})">Save</button>
+                  </div>
+                </div>
+
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <h3>No jobs found</h3>
+      <p>Adjust your filters or run a scrape to populate the database.</p>
+    </div>
+    {% endif %}
+
+  </main>
+
+  <script>
+    /* ── Filter Navigation ─────────────────────────────── */
+    function applyFilters() {
+      var status = document.getElementById('filter-status').value;
+      var source = document.getElementById('filter-source').value;
+      var sortVal = document.getElementById('filter-sort').value;
+
+      var parts = sortVal.split('_');
+      var sort = parts[0];
+      var order = parts[1];
+
+      var params = new URLSearchParams();
+      if (status) params.set('status', status);
+      if (source) params.set('source', source);
+      if (sort) params.set('sort', sort);
+      if (order) params.set('order', order);
+
+      window.location.href = '/jobs' + (params.toString() ? '?' + params.toString() : '');
+    }
+
+    /* ── Accordion Toggle ──────────────────────────────── */
+    function toggleDetail(rowEl, event) {
+      if (event && (event.target.tagName === 'SELECT' || event.target.tagName === 'OPTION' || event.target.tagName === 'BUTTON')) {
+        return;
+      }
+
+      var jobId = rowEl.getAttribute('data-job-id');
+      var detailRow = document.querySelector('tr.detail-row[data-detail-for="' + jobId + '"]');
+
+      // Collapse all other expanded rows
+      document.querySelectorAll('tr.job-row.expanded').forEach(function(r) {
+        if (r !== rowEl) {
+          r.classList.remove('expanded');
+        }
+      });
+      document.querySelectorAll('tr.detail-row.visible').forEach(function(r) {
+        if (r !== detailRow) {
+          r.classList.remove('visible');
+        }
+      });
+
+      // Toggle this row
+      rowEl.classList.toggle('expanded');
+      detailRow.classList.toggle('visible');
+    }
+
+    /* ── Status Change ─────────────────────────────────── */
+    function changeStatus(selectEl) {
+      var jobId = selectEl.getAttribute('data-job-id');
+      var newStatus = selectEl.value;
+
+      fetch('/api/jobs/' + jobId + '/status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus })
+      })
+      .then(function(resp) {
+        if (!resp.ok) throw new Error('Status update failed');
+        return resp.json();
+      })
+      .then(function(data) {
+        var row = selectEl.closest('tr.job-row');
+        if (row) {
+          var badge = row.querySelector('.status-badge');
+          if (badge) {
+            badge.className = 'status-badge status-' + newStatus;
+            badge.textContent = newStatus.charAt(0).toUpperCase() + newStatus.slice(1);
+          }
+        }
+      })
+      .catch(function(err) {
+        console.error('Failed to update status:', err);
+        alert('Failed to update status. Check the console for details.');
+      });
+    }
+
+    /* ── Save Notes ────────────────────────────────────── */
+    function saveNotes(jobId) {
+      var textarea = document.getElementById('notes-' + jobId);
+      var notes = textarea.value;
+
+      fetch('/api/jobs/' + jobId + '/notes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notes: notes })
+      })
+      .then(function(resp) {
+        if (!resp.ok) throw new Error('Notes save failed');
+        textarea.style.borderColor = '#34d399';
+        setTimeout(function() {
+          textarea.style.borderColor = '';
+        }, 1500);
+      })
+      .catch(function(err) {
+        console.error('Failed to save notes:', err);
+        textarea.style.borderColor = '#f87171';
+        setTimeout(function() {
+          textarea.style.borderColor = '';
+        }, 1500);
+      });
+    }
+  </script>
+
+</body>
+</html>

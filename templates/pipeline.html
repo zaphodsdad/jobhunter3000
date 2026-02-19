@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pipeline — JobHunter3000</title>
+  {% include 'base_styles.html' %}
+  <style>
+    /* ── Pipeline Layout ───────────────────────────────── */
+    .pipeline-columns {
+      display: flex;
+      gap: 1rem;
+      align-items: flex-start;
+      overflow-x: auto;
+      padding-bottom: 1rem;
+    }
+
+    .pipeline-col {
+      flex: 1;
+      min-width: 220px;
+      min-height: 300px;
+      background: #0c0e14;
+      border: 1px solid #1a1f2e;
+      border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ── Column Status Colors (top border) ─────────────── */
+    .pipeline-col.col-new          { border-top: 3px solid #818cf8; }
+    .pipeline-col.col-interested   { border-top: 3px solid #00e5ff; }
+    .pipeline-col.col-applied      { border-top: 3px solid #fbbf24; }
+    .pipeline-col.col-interviewing { border-top: 3px solid #34d399; }
+    .pipeline-col.col-offer        { border-top: 3px solid #c084fc; }
+
+    /* ── Column Header ─────────────────────────────────── */
+    .pipeline-col-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.75rem 0.85rem;
+      border-bottom: 1px solid #1a1f2e;
+    }
+
+    .pipeline-col-header h3 {
+      margin: 0;
+      font-size: 0.82rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #94a3b8;
+      font-weight: 600;
+    }
+
+    .col-count {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 1.5rem;
+      height: 1.5rem;
+      padding: 0 0.4rem;
+      border-radius: 999px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      background: rgba(107, 114, 128, 0.15);
+      color: #6b7280;
+    }
+
+    .col-new .col-count          { background: rgba(99, 102, 241, 0.15); color: #818cf8; }
+    .col-interested .col-count   { background: rgba(0, 229, 255, 0.12);  color: #00e5ff; }
+    .col-applied .col-count      { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
+    .col-interviewing .col-count { background: rgba(16, 185, 129, 0.15); color: #34d399; }
+    .col-offer .col-count        { background: rgba(168, 85, 247, 0.15); color: #c084fc; }
+
+    /* ── Card List ─────────────────────────────────────── */
+    .pipeline-cards {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0.65rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .pipeline-cards::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .pipeline-cards::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .pipeline-cards::-webkit-scrollbar-thumb {
+      background: #2a2f3e;
+      border-radius: 2px;
+    }
+
+    /* ── Job Card ──────────────────────────────────────── */
+    .pipeline-card {
+      background: #111318;
+      border: 1px solid #1a1f2e;
+      border-radius: 8px;
+      padding: 0.7rem 0.8rem;
+      transition: border-color 0.2s, background 0.2s;
+    }
+
+    .pipeline-card:hover {
+      border-color: rgba(0, 229, 255, 0.25);
+      background: #13161d;
+    }
+
+    .pipeline-card-title {
+      font-weight: 600;
+      font-size: 0.88rem;
+      color: #e2e8f0;
+      margin: 0 0 0.25rem 0;
+      line-height: 1.3;
+    }
+
+    .pipeline-card-company {
+      font-size: 0.8rem;
+      color: #94a3b8;
+      margin: 0 0 0.5rem 0;
+    }
+
+    .pipeline-card-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .pipeline-card-meta .score-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 2rem;
+      padding: 0.15rem 0.4rem;
+      border-radius: 5px;
+      font-weight: 700;
+      font-size: 0.78rem;
+      text-align: center;
+    }
+
+    .score-badge.score-high {
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    .score-badge.score-good {
+      background: rgba(0, 229, 255, 0.12);
+      color: #00e5ff;
+      border: 1px solid rgba(0, 229, 255, 0.25);
+    }
+
+    .score-badge.score-mid {
+      background: rgba(245, 158, 11, 0.12);
+      color: #fbbf24;
+      border: 1px solid rgba(245, 158, 11, 0.25);
+    }
+
+    .score-badge.score-low {
+      background: rgba(107, 114, 128, 0.12);
+      color: #6b7280;
+      border: 1px solid rgba(107, 114, 128, 0.25);
+    }
+
+    .pipeline-card-date {
+      font-size: 0.72rem;
+      color: #6b7280;
+    }
+
+    /* ── Card Status Select ────────────────────────────── */
+    .card-status-select {
+      background: #0c0e14;
+      color: #94a3b8;
+      border: 1px solid #2a2f3e;
+      border-radius: 5px;
+      padding: 0.2rem 0.35rem;
+      font-size: 0.72rem;
+      cursor: pointer;
+      outline: none;
+      transition: border-color 0.2s;
+      margin-top: 0.45rem;
+      width: 100%;
+    }
+
+    .card-status-select:hover,
+    .card-status-select:focus {
+      border-color: #00e5ff;
+      color: #e2e8f0;
+    }
+
+    /* ── Empty Column ──────────────────────────────────── */
+    .pipeline-empty {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex: 1;
+      padding: 1.5rem 0.5rem;
+      font-size: 0.8rem;
+      color: #3a3f4e;
+      text-align: center;
+      font-style: italic;
+    }
+
+    /* ── Rejected Section ──────────────────────────────── */
+    .rejected-section {
+      margin-top: 2rem;
+      border: 1px solid #1a1f2e;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .rejected-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.65rem 1rem;
+      background: #0c0e14;
+      cursor: pointer;
+      user-select: none;
+      transition: background 0.15s;
+    }
+
+    .rejected-header:hover {
+      background: #0e1018;
+    }
+
+    .rejected-header h3 {
+      margin: 0;
+      font-size: 0.85rem;
+      color: #6b7280;
+      font-weight: 600;
+    }
+
+    .rejected-header .toggle-icon {
+      color: #6b7280;
+      font-size: 0.75rem;
+      transition: transform 0.2s;
+    }
+
+    .rejected-header.expanded .toggle-icon {
+      transform: rotate(180deg);
+    }
+
+    .rejected-list {
+      display: none;
+      padding: 0.5rem 1rem 0.75rem 1rem;
+    }
+
+    .rejected-list.visible {
+      display: block;
+    }
+
+    .rejected-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.35rem 0;
+      border-bottom: 1px solid #111318;
+      font-size: 0.82rem;
+      color: #6b7280;
+    }
+
+    .rejected-item:last-child {
+      border-bottom: none;
+    }
+
+    .rejected-item-info {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .rejected-item-title {
+      color: #94a3b8;
+    }
+
+    .rejected-item-company {
+      color: #4b5563;
+    }
+
+    .rejected-item select {
+      background: #0c0e14;
+      color: #6b7280;
+      border: 1px solid #1a1f2e;
+      border-radius: 5px;
+      padding: 0.15rem 0.3rem;
+      font-size: 0.72rem;
+      cursor: pointer;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .rejected-item select:hover,
+    .rejected-item select:focus {
+      border-color: #00e5ff;
+      color: #e2e8f0;
+    }
+
+    .rejected-empty {
+      padding: 0.75rem 0;
+      color: #3a3f4e;
+      font-style: italic;
+      font-size: 0.82rem;
+    }
+
+    /* ── Responsive ────────────────────────────────────── */
+    @media (max-width: 900px) {
+      .pipeline-columns {
+        flex-direction: column;
+      }
+
+      .pipeline-col {
+        min-width: 100%;
+        min-height: auto;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ── Topbar ──────────────────────────────────────── -->
+  <header class="topbar">
+    <div class="topbar-brand">Job<span>Hunter</span>3000</div>
+    <div class="topbar-right">Intel Report</div>
+  </header>
+
+  <!-- ── Navigation ──────────────────────────────────── -->
+  {% set active = 'pipeline' %}
+  {% include 'nav.html' %}
+
+  <!-- ── Content ─────────────────────────────────────── -->
+  <main class="content">
+
+    <!-- Pipeline Columns -->
+    <div class="pipeline-columns">
+
+      {% set columns = [
+        ('new', 'New'),
+        ('interested', 'Interested'),
+        ('applied', 'Applied'),
+        ('interviewing', 'Interviewing'),
+        ('offer', 'Offer')
+      ] %}
+
+      {% for status_key, status_label in columns %}
+      {% set col_jobs = pipeline.get(status_key, []) %}
+      <div class="pipeline-col col-{{ status_key }}">
+        <div class="pipeline-col-header">
+          <h3>{{ status_label }}</h3>
+          <span class="col-count">{{ col_jobs | length }}</span>
+        </div>
+
+        <div class="pipeline-cards">
+          {% if col_jobs | length > 0 %}
+            {% for job in col_jobs %}
+            <div class="pipeline-card" data-job-id="{{ job.id }}">
+              <p class="pipeline-card-title">{{ job.title }}</p>
+              <p class="pipeline-card-company">{{ job.company or '—' }}</p>
+              <div class="pipeline-card-meta">
+                {% if job.score is not none %}
+                <span class="score-badge {% if job.score >= 80 %}score-high{% elif job.score >= 60 %}score-good{% elif job.score >= 40 %}score-mid{% else %}score-low{% endif %}">
+                  {{ job.score }}
+                </span>
+                {% else %}
+                <span class="score-badge score-low">&mdash;</span>
+                {% endif %}
+                <span class="pipeline-card-date">
+                  {% if job.applied_date %}
+                    {{ job.applied_date }}
+                  {% elif job.created_at %}
+                    {{ job.created_at }}
+                  {% endif %}
+                </span>
+              </div>
+              <select class="card-status-select" data-job-id="{{ job.id }}" onchange="changeStatus(this)">
+                <option value="new" {% if status_key == 'new' %}selected{% endif %}>New</option>
+                <option value="interested" {% if status_key == 'interested' %}selected{% endif %}>Interested</option>
+                <option value="applied" {% if status_key == 'applied' %}selected{% endif %}>Applied</option>
+                <option value="interviewing" {% if status_key == 'interviewing' %}selected{% endif %}>Interviewing</option>
+                <option value="offer" {% if status_key == 'offer' %}selected{% endif %}>Offer</option>
+                <option value="rejected" {% if status_key == 'rejected' %}selected{% endif %}>Rejected</option>
+                <option value="archived" {% if status_key == 'archived' %}selected{% endif %}>Archived</option>
+              </select>
+            </div>
+            {% endfor %}
+          {% else %}
+            <div class="pipeline-empty">No jobs here yet</div>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+
+    </div>
+
+    <!-- Rejected Section (Collapsible) -->
+    <div class="rejected-section">
+      <div class="rejected-header" onclick="toggleRejected(this)">
+        <h3>Rejected ({{ rejected | length }})</h3>
+        <span class="toggle-icon">&#9660;</span>
+      </div>
+      <div class="rejected-list">
+        {% if rejected | length > 0 %}
+          {% for job in rejected %}
+          <div class="rejected-item">
+            <div class="rejected-item-info">
+              <span class="rejected-item-title">{{ job.title }}</span>
+              <span class="rejected-item-company">{{ job.company or '' }}</span>
+            </div>
+            <select data-job-id="{{ job.id }}" onchange="changeStatus(this)">
+              <option value="rejected" selected>Rejected</option>
+              <option value="new">New</option>
+              <option value="interested">Interested</option>
+              <option value="applied">Applied</option>
+              <option value="interviewing">Interviewing</option>
+              <option value="offer">Offer</option>
+              <option value="archived">Archived</option>
+            </select>
+          </div>
+          {% endfor %}
+        {% else %}
+          <div class="rejected-empty">No rejected jobs.</div>
+        {% endif %}
+      </div>
+    </div>
+
+  </main>
+
+  <script>
+    /* ── Status Change ─────────────────────────────────── */
+    function changeStatus(selectEl) {
+      var jobId = selectEl.getAttribute('data-job-id');
+      var newStatus = selectEl.value;
+
+      fetch('/api/jobs/' + jobId + '/status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus })
+      })
+      .then(function(resp) {
+        if (!resp.ok) throw new Error('Status update failed');
+        return resp.json();
+      })
+      .then(function(data) {
+        // Reload the page to reflect the card moving to a new column
+        window.location.reload();
+      })
+      .catch(function(err) {
+        console.error('Failed to update status:', err);
+        alert('Failed to update status. Check the console for details.');
+      });
+    }
+
+    /* ── Toggle Rejected Section ───────────────────────── */
+    function toggleRejected(headerEl) {
+      headerEl.classList.toggle('expanded');
+      var list = headerEl.nextElementSibling;
+      list.classList.toggle('visible');
+    }
+  </script>
+
+</body>
+</html>

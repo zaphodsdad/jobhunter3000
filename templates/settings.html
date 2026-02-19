@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings — JobHunter3000</title>
+    <style>
+        {% include 'base_styles.html' %}
+
+        /* ── Settings-specific styles ──────────────────────── */
+
+        .settings-form {
+            max-width: 800px;
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .card-header h2 {
+            margin-bottom: 0;
+            font-size: 16px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .card-header h2::before {
+            content: '//';
+            color: var(--accent-primary);
+            margin-right: 8px;
+        }
+
+        /* Radio toggle group */
+        .radio-group {
+            display: flex;
+            gap: 0;
+            margin-bottom: 20px;
+        }
+
+        .radio-group label {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 10px 16px;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            background: var(--bg-nav);
+            border: 1px solid var(--border);
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .radio-group label:first-child {
+            border-radius: 6px 0 0 6px;
+        }
+
+        .radio-group label:last-child {
+            border-radius: 0 6px 6px 0;
+            border-left: none;
+        }
+
+        .radio-group input[type="radio"] {
+            display: none;
+        }
+
+        .radio-group input[type="radio"]:checked + label,
+        .radio-group label.selected {
+            background: var(--accent-primary);
+            color: #0f1117;
+            border-color: var(--accent-primary);
+            font-weight: 600;
+        }
+
+        .provider-fields {
+            display: none;
+        }
+
+        .provider-fields.active {
+            display: block;
+        }
+
+        /* Password toggle */
+        .input-with-toggle {
+            position: relative;
+        }
+
+        .input-with-toggle input {
+            padding-right: 48px;
+        }
+
+        .toggle-visibility {
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 12px;
+            padding: 4px 8px;
+            border-radius: 4px;
+            transition: color 0.15s ease;
+        }
+
+        .toggle-visibility:hover {
+            color: var(--text-primary);
+        }
+
+        /* Test connection button + result */
+        .test-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-top: 8px;
+        }
+
+        .test-result {
+            font-size: 13px;
+            font-weight: 500;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .test-result.visible {
+            opacity: 1;
+        }
+
+        .test-result.success {
+            color: var(--score-high);
+        }
+
+        .test-result.error {
+            color: #f87171;
+        }
+
+        /* Threshold inputs inline */
+        .threshold-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        /* Search profiles readonly list */
+        .profile-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .profile-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 14px;
+            background: var(--bg-nav);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 13px;
+        }
+
+        .profile-item .profile-name {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .profile-item .profile-meta {
+            color: var(--text-secondary);
+            font-size: 12px;
+        }
+
+        .profile-item .profile-boards {
+            display: flex;
+            gap: 4px;
+        }
+
+        .board-tag {
+            display: inline-block;
+            padding: 2px 8px;
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            background: rgba(34, 211, 238, 0.1);
+            color: var(--accent-primary);
+            border-radius: 4px;
+        }
+
+        .profile-note {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 12px;
+            font-style: italic;
+        }
+
+        /* Save button full width */
+        .btn-save {
+            width: 100%;
+            padding: 14px;
+            font-size: 16px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 8px;
+        }
+
+        /* Section description */
+        .section-desc {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-bottom: 16px;
+        }
+    </style>
+</head>
+<body>
+
+<!-- ── Topbar ──────────────────────────────────────────────── -->
+<div class="topbar">
+    <h1>Job<span>Hunter</span>3000</h1>
+</div>
+
+<!-- ── Navigation ─────────────────────────────────────────── -->
+{% set active = 'settings' %}
+{% include 'nav.html' %}
+
+<!-- ── Content ────────────────────────────────────────────── -->
+<div class="content">
+    <form method="POST" action="/settings" class="settings-form">
+
+        <!-- ════════════════════════════════════════════════════
+             LLM Provider
+             ════════════════════════════════════════════════════ -->
+        <div class="card">
+            <div class="card-header">
+                <h2>LLM Provider</h2>
+            </div>
+            <p class="section-desc">Choose where job scoring and resume generation requests are sent.</p>
+
+            <div class="radio-group">
+                <input type="radio" name="llm_provider" id="provider-openrouter" value="openrouter"
+                       {% if settings.llm_provider == 'openrouter' %}checked{% endif %}>
+                <label for="provider-openrouter" id="label-openrouter"
+                       class="{% if settings.llm_provider == 'openrouter' %}selected{% endif %}">OpenRouter</label>
+
+                <input type="radio" name="llm_provider" id="provider-ollama" value="ollama"
+                       {% if settings.llm_provider == 'ollama' %}checked{% endif %}>
+                <label for="provider-ollama" id="label-ollama"
+                       class="{% if settings.llm_provider == 'ollama' %}selected{% endif %}">Ollama</label>
+            </div>
+
+            <!-- OpenRouter fields -->
+            <div id="openrouter-fields" class="provider-fields {% if settings.llm_provider == 'openrouter' %}active{% endif %}">
+                <div class="form-group">
+                    <label for="openrouter_api_key">API Key</label>
+                    <div class="input-with-toggle">
+                        <input type="password" id="openrouter_api_key" name="openrouter_api_key"
+                               value="{{ settings.openrouter_api_key }}"
+                               placeholder="sk-or-v1-...">
+                        <button type="button" class="toggle-visibility" onclick="toggleApiKey()" id="toggle-key-btn">SHOW</button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="openrouter_model">Model</label>
+                    <input type="text" id="openrouter_model" name="openrouter_model"
+                           value="{{ settings.openrouter_model }}"
+                           placeholder="anthropic/claude-sonnet-4">
+                </div>
+            </div>
+
+            <!-- Ollama fields -->
+            <div id="ollama-fields" class="provider-fields {% if settings.llm_provider == 'ollama' %}active{% endif %}">
+                <div class="form-group">
+                    <label for="ollama_endpoint">Endpoint URL</label>
+                    <input type="text" id="ollama_endpoint" name="ollama_endpoint"
+                           value="{{ settings.ollama_endpoint }}"
+                           placeholder="http://localhost:11434">
+                </div>
+                <div class="form-group">
+                    <label for="ollama_model">Model</label>
+                    <input type="text" id="ollama_model" name="ollama_model"
+                           value="{{ settings.ollama_model }}"
+                           placeholder="qwen2.5-coder:32b">
+                </div>
+            </div>
+
+            <div class="test-row">
+                <button type="button" class="btn btn-sm" onclick="testLLM()">Test Connection</button>
+                <span id="llm-test-result" class="test-result"></span>
+            </div>
+        </div>
+
+        <!-- ════════════════════════════════════════════════════
+             Notifications
+             ════════════════════════════════════════════════════ -->
+        <div class="card">
+            <div class="card-header">
+                <h2>Notifications</h2>
+            </div>
+            <p class="section-desc">Pushover credentials and scoring thresholds for job match alerts.</p>
+
+            <div class="form-group">
+                <label for="pushover_user_key">Pushover User Key</label>
+                <input type="text" id="pushover_user_key" name="pushover_user_key"
+                       value="{{ settings.pushover_user_key }}"
+                       placeholder="Your Pushover user key">
+            </div>
+            <div class="form-group">
+                <label for="pushover_api_token">Pushover API Token</label>
+                <input type="text" id="pushover_api_token" name="pushover_api_token"
+                       value="{{ settings.pushover_api_token }}"
+                       placeholder="Your Pushover API token">
+            </div>
+
+            <div class="test-row mb-3">
+                <button type="button" class="btn btn-sm" onclick="testNotify()">Test Notification</button>
+                <span id="notify-test-result" class="test-result"></span>
+            </div>
+
+            <div class="threshold-row">
+                <div class="form-group">
+                    <label for="notify_threshold">Notify Threshold (0-100)</label>
+                    <input type="number" id="notify_threshold" name="notify_threshold"
+                           value="{{ settings.notify_threshold }}"
+                           min="0" max="100" step="1">
+                </div>
+                <div class="form-group">
+                    <label for="priority_threshold">Priority Threshold (0-100)</label>
+                    <input type="number" id="priority_threshold" name="priority_threshold"
+                           value="{{ settings.priority_threshold }}"
+                           min="0" max="100" step="1">
+                </div>
+            </div>
+        </div>
+
+        <!-- ════════════════════════════════════════════════════
+             Search Profiles
+             ════════════════════════════════════════════════════ -->
+        <div class="card">
+            <div class="card-header">
+                <h2>Search Profiles</h2>
+            </div>
+            <p class="section-desc">Active search configurations used during scraping runs.</p>
+
+            <div class="profile-list">
+                {% for profile in settings.search_profiles %}
+                <div class="profile-item">
+                    <div>
+                        <div class="profile-name">{{ profile.name }}</div>
+                        <div class="profile-meta">{{ profile.query }} &middot; {{ profile.location }}</div>
+                    </div>
+                    <div class="profile-boards">
+                        {% for board in profile.boards %}
+                        <span class="board-tag">{{ board }}</span>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            <p class="profile-note">Search profiles can be edited in data/settings.json directly for now.</p>
+        </div>
+
+        <!-- ════════════════════════════════════════════════════
+             Filters
+             ════════════════════════════════════════════════════ -->
+        <div class="card">
+            <div class="card-header">
+                <h2>Filters</h2>
+            </div>
+            <p class="section-desc">Keywords and age limits to automatically exclude irrelevant postings.</p>
+
+            <div class="form-group">
+                <label for="exclude_keywords">Exclude Keywords (one per line)</label>
+                <textarea id="exclude_keywords" name="exclude_keywords"
+                          rows="5"
+                          placeholder="security clearance required&#10;commission only&#10;CDL required">{{ settings.exclude_keywords | join('\n') }}</textarea>
+            </div>
+            <div class="form-group">
+                <label for="max_days_old">Max Posting Age (days)</label>
+                <input type="number" id="max_days_old" name="max_days_old"
+                       value="{{ settings.max_days_old }}"
+                       min="1" max="90" step="1">
+            </div>
+        </div>
+
+        <!-- ════════════════════════════════════════════════════
+             Save
+             ════════════════════════════════════════════════════ -->
+        <button type="submit" class="btn btn-primary btn-save">Save Settings</button>
+
+    </form>
+</div>
+
+<!-- ── Toast Container ────────────────────────────────────── -->
+<div class="toast-container" id="toast-container"></div>
+
+<!-- ── JavaScript ─────────────────────────────────────────── -->
+<script>
+    // ── Provider toggle ─────────────────────────────────────
+    const radioOpenRouter = document.getElementById('provider-openrouter');
+    const radioOllama = document.getElementById('provider-ollama');
+    const labelOpenRouter = document.getElementById('label-openrouter');
+    const labelOllama = document.getElementById('label-ollama');
+    const fieldsOpenRouter = document.getElementById('openrouter-fields');
+    const fieldsOllama = document.getElementById('ollama-fields');
+
+    function updateProviderFields() {
+        if (radioOpenRouter.checked) {
+            fieldsOpenRouter.classList.add('active');
+            fieldsOllama.classList.remove('active');
+            labelOpenRouter.classList.add('selected');
+            labelOllama.classList.remove('selected');
+        } else {
+            fieldsOllama.classList.add('active');
+            fieldsOpenRouter.classList.remove('active');
+            labelOllama.classList.add('selected');
+            labelOpenRouter.classList.remove('selected');
+        }
+    }
+
+    radioOpenRouter.addEventListener('change', updateProviderFields);
+    radioOllama.addEventListener('change', updateProviderFields);
+
+    // ── API key show/hide ───────────────────────────────────
+    function toggleApiKey() {
+        const input = document.getElementById('openrouter_api_key');
+        const btn = document.getElementById('toggle-key-btn');
+        if (input.type === 'password') {
+            input.type = 'text';
+            btn.textContent = 'HIDE';
+        } else {
+            input.type = 'password';
+            btn.textContent = 'SHOW';
+        }
+    }
+
+    // ── Test LLM connection ─────────────────────────────────
+    async function testLLM() {
+        const result = document.getElementById('llm-test-result');
+        result.textContent = 'Testing...';
+        result.className = 'test-result visible';
+
+        try {
+            const resp = await fetch('/api/test-llm', { method: 'POST' });
+            const data = await resp.json();
+            if (data.ok) {
+                result.textContent = 'Connected!';
+                result.className = 'test-result visible success';
+            } else {
+                result.textContent = data.error || 'Connection failed';
+                result.className = 'test-result visible error';
+            }
+        } catch (err) {
+            result.textContent = 'Request failed: ' + err.message;
+            result.className = 'test-result visible error';
+        }
+    }
+
+    // ── Test notification ───────────────────────────────────
+    async function testNotify() {
+        const result = document.getElementById('notify-test-result');
+        result.textContent = 'Sending...';
+        result.className = 'test-result visible';
+
+        try {
+            const resp = await fetch('/api/test-notify', { method: 'POST' });
+            const data = await resp.json();
+            if (data.ok) {
+                result.textContent = 'Sent!';
+                result.className = 'test-result visible success';
+            } else {
+                result.textContent = data.error || 'Send failed';
+                result.className = 'test-result visible error';
+            }
+        } catch (err) {
+            result.textContent = 'Request failed: ' + err.message;
+            result.className = 'test-result visible error';
+        }
+    }
+
+    // ── Toast helper ────────────────────────────────────────
+    function showToast(message, type) {
+        const container = document.getElementById('toast-container');
+        const toast = document.createElement('div');
+        toast.className = 'toast toast-' + (type || 'success');
+        toast.textContent = message;
+        container.appendChild(toast);
+
+        setTimeout(function() {
+            toast.style.animation = 'toast-out 0.3s ease forwards';
+            setTimeout(function() {
+                toast.remove();
+            }, 300);
+        }, 4000);
+    }
+
+    // ── Show saved toast on load if applicable ──────────────
+    {% if saved %}
+    document.addEventListener('DOMContentLoaded', function() {
+        showToast('Settings saved successfully', 'success');
+    });
+    {% endif %}
+</script>
+
+</body>
+</html>

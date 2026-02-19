@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JobHunter3000 — Mission Control</title>
+    <style>
+        {% include 'base_styles.html' %}
+
+        /* ── Dashboard-specific styles ─────────────────────────── */
+
+        .topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 2rem;
+            background: var(--surface, #0d1117);
+            border-bottom: 1px solid var(--border, #21262d);
+        }
+
+        .topbar-brand {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-primary, #e6edf3);
+            letter-spacing: -0.5px;
+        }
+
+        .topbar-brand span {
+            color: var(--cyan, #00e5ff);
+        }
+
+        .topbar-date {
+            font-size: 0.85rem;
+            color: var(--text-muted, #8b949e);
+            font-family: 'Courier New', monospace;
+        }
+
+        .content-area {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 1.5rem 2rem 3rem;
+        }
+
+        .mission-header {
+            margin-bottom: 1.5rem;
+        }
+
+        .mission-header h1 {
+            color: var(--text-primary, #e6edf3);
+            font-weight: 600;
+            margin: 0 0 0.25rem 0;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            font-size: 0.85rem;
+        }
+
+        .mission-header h1::before {
+            content: '//';
+            color: var(--cyan, #00e5ff);
+            margin-right: 0.5rem;
+        }
+
+        .momentum-line {
+            font-size: 0.8rem;
+            color: var(--text-muted, #8b949e);
+            margin: 0;
+        }
+
+        .momentum-line strong {
+            color: var(--cyan, #00e5ff);
+        }
+
+        /* ── Stat Cards ──────────────────────────────────────── */
+
+        .stat-cards {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: var(--surface, #0d1117);
+            border: 1px solid var(--border, #21262d);
+            border-radius: 8px;
+            padding: 1.25rem;
+            border-left: 3px solid var(--border, #21262d);
+            transition: border-color 0.2s ease, transform 0.15s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+        }
+
+        .stat-card--pipeline {
+            border-left-color: var(--cyan, #00e5ff);
+        }
+
+        .stat-card--applied {
+            border-left-color: var(--blue, #58a6ff);
+        }
+
+        .stat-card--response {
+            border-left-color: var(--green, #3fb950);
+        }
+
+        .stat-card--topmatch {
+            border-left-color: var(--amber, #d29922);
+        }
+
+        .stat-card__label {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+            color: var(--text-muted, #8b949e);
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-card__value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--text-primary, #e6edf3);
+            line-height: 1;
+            margin-bottom: 0.35rem;
+        }
+
+        .stat-card__sub {
+            font-size: 0.75rem;
+            color: var(--text-muted, #8b949e);
+        }
+
+        .stat-card__value--green { color: var(--green, #3fb950); }
+        .stat-card__value--amber { color: var(--amber, #d29922); }
+        .stat-card__value--red { color: var(--red, #f85149); }
+
+        .top-match-title {
+            font-size: 0.75rem;
+            color: var(--text-secondary, #c9d1d9);
+            margin-top: 0.25rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* ── Pipeline Distribution Bar ───────────────────────── */
+
+        .pipeline-section {
+            margin-bottom: 2rem;
+        }
+
+        .pipeline-section__title {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+            color: var(--text-muted, #8b949e);
+            margin-bottom: 0.75rem;
+        }
+
+        .pipeline-bar-container {
+            background: var(--surface, #0d1117);
+            border: 1px solid var(--border, #21262d);
+            border-radius: 8px;
+            padding: 1.25rem;
+        }
+
+        .pipeline-bar {
+            display: flex;
+            height: 36px;
+            border-radius: 6px;
+            overflow: hidden;
+            background: var(--bg, #010409);
+        }
+
+        .pipeline-bar__segment {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: #fff;
+            min-width: 28px;
+            transition: flex-basis 0.4s ease;
+            cursor: default;
+        }
+
+        .pipeline-bar__segment--new { background: var(--text-muted, #8b949e); }
+        .pipeline-bar__segment--interested { background: var(--cyan, #00e5ff); color: #000; }
+        .pipeline-bar__segment--applied { background: var(--blue, #58a6ff); }
+        .pipeline-bar__segment--interviewing { background: var(--amber, #d29922); color: #000; }
+        .pipeline-bar__segment--offer { background: var(--green, #3fb950); color: #000; }
+        .pipeline-bar__segment--rejected { background: var(--red, #f85149); }
+        .pipeline-bar__segment--hired { background: #a371f7; }
+
+        .pipeline-bar__empty {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            color: var(--text-muted, #8b949e);
+            font-size: 0.8rem;
+        }
+
+        .pipeline-legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-top: 0.75rem;
+        }
+
+        .pipeline-legend__item {
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+            font-size: 0.72rem;
+            color: var(--text-muted, #8b949e);
+        }
+
+        .pipeline-legend__dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 2px;
+        }
+
+        .legend-new { background: var(--text-muted, #8b949e); }
+        .legend-interested { background: var(--cyan, #00e5ff); }
+        .legend-applied { background: var(--blue, #58a6ff); }
+        .legend-interviewing { background: var(--amber, #d29922); }
+        .legend-offer { background: var(--green, #3fb950); }
+        .legend-rejected { background: var(--red, #f85149); }
+        .legend-hired { background: #a371f7; }
+
+        /* ── Two-Column Layout ───────────────────────────────── */
+
+        .two-col {
+            display: grid;
+            grid-template-columns: 3fr 2fr;
+            gap: 1.5rem;
+        }
+
+        /* ── Recent Activity ─────────────────────────────────── */
+
+        .panel {
+            background: var(--surface, #0d1117);
+            border: 1px solid var(--border, #21262d);
+            border-radius: 8px;
+            padding: 1.25rem;
+        }
+
+        .panel__title {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+            color: var(--text-muted, #8b949e);
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--border, #21262d);
+        }
+
+        .recent-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .recent-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.6rem 0;
+            border-bottom: 1px solid var(--border, #21262d);
+        }
+
+        .recent-item:last-child {
+            border-bottom: none;
+        }
+
+        .status-badge {
+            display: inline-block;
+            font-size: 0.6rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 0.2rem 0.5rem;
+            border-radius: 9999px;
+            white-space: nowrap;
+            min-width: 62px;
+            text-align: center;
+        }
+
+        .status-badge--new { background: rgba(139,148,158,0.15); color: var(--text-muted, #8b949e); }
+        .status-badge--interested { background: rgba(0,229,255,0.12); color: var(--cyan, #00e5ff); }
+        .status-badge--applied { background: rgba(88,166,255,0.12); color: var(--blue, #58a6ff); }
+        .status-badge--interviewing { background: rgba(210,153,34,0.15); color: var(--amber, #d29922); }
+        .status-badge--offer { background: rgba(63,185,80,0.15); color: var(--green, #3fb950); }
+        .status-badge--rejected { background: rgba(248,81,73,0.12); color: var(--red, #f85149); }
+        .status-badge--hired { background: rgba(163,113,247,0.15); color: #a371f7; }
+
+        .recent-item__info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .recent-item__title {
+            font-size: 0.85rem;
+            color: var(--text-primary, #e6edf3);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .recent-item__title a {
+            color: inherit;
+            text-decoration: none;
+        }
+
+        .recent-item__title a:hover {
+            color: var(--cyan, #00e5ff);
+        }
+
+        .recent-item__company {
+            font-size: 0.75rem;
+            color: var(--text-muted, #8b949e);
+        }
+
+        .recent-item__meta {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex-shrink: 0;
+        }
+
+        .score-badge {
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 0.15rem 0.45rem;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+        }
+
+        .score-badge--high { background: rgba(63,185,80,0.15); color: var(--green, #3fb950); }
+        .score-badge--mid { background: rgba(210,153,34,0.15); color: var(--amber, #d29922); }
+        .score-badge--low { background: rgba(248,81,73,0.12); color: var(--red, #f85149); }
+
+        .recent-item__time {
+            font-size: 0.7rem;
+            color: var(--text-muted, #8b949e);
+            white-space: nowrap;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 2rem 1rem;
+            color: var(--text-muted, #8b949e);
+            font-size: 0.85rem;
+        }
+
+        .empty-state__icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+            opacity: 0.4;
+        }
+
+        /* ── Pipeline Funnel ─────────────────────────────────── */
+
+        .funnel {
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+        }
+
+        .funnel-step {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.65rem 1rem;
+            margin: 0 auto;
+            position: relative;
+            border-radius: 4px;
+            transition: background 0.2s ease;
+        }
+
+        .funnel-step:hover {
+            filter: brightness(1.15);
+        }
+
+        .funnel-step__label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+        }
+
+        .funnel-step__count {
+            font-size: 1.1rem;
+            font-weight: 700;
+            font-family: 'Courier New', monospace;
+        }
+
+        .funnel-step--new {
+            width: 100%;
+            background: rgba(139,148,158,0.1);
+            color: var(--text-muted, #8b949e);
+            border-left: 3px solid var(--text-muted, #8b949e);
+        }
+
+        .funnel-step--interested {
+            width: 88%;
+            background: rgba(0,229,255,0.08);
+            color: var(--cyan, #00e5ff);
+            border-left: 3px solid var(--cyan, #00e5ff);
+        }
+
+        .funnel-step--applied {
+            width: 72%;
+            background: rgba(88,166,255,0.08);
+            color: var(--blue, #58a6ff);
+            border-left: 3px solid var(--blue, #58a6ff);
+        }
+
+        .funnel-step--interviewing {
+            width: 52%;
+            background: rgba(210,153,34,0.08);
+            color: var(--amber, #d29922);
+            border-left: 3px solid var(--amber, #d29922);
+        }
+
+        .funnel-step--offer {
+            width: 36%;
+            background: rgba(63,185,80,0.1);
+            color: var(--green, #3fb950);
+            border-left: 3px solid var(--green, #3fb950);
+        }
+
+        .funnel-connector {
+            width: 2px;
+            height: 8px;
+            background: var(--border, #21262d);
+            margin: 0 auto;
+        }
+
+        /* ── Responsive ──────────────────────────────────────── */
+
+        @media (max-width: 900px) {
+            .stat-cards {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .two-col {
+                grid-template-columns: 1fr;
+            }
+
+            .topbar {
+                padding: 1rem;
+            }
+
+            .content-area {
+                padding: 1rem;
+            }
+        }
+
+        @media (max-width: 500px) {
+            .stat-cards {
+                grid-template-columns: 1fr;
+            }
+
+            .topbar-brand {
+                font-size: 1.2rem;
+            }
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+</head>
+<body>
+    <!-- ── Topbar ──────────────────────────────────────────── -->
+    <header class="topbar">
+        <div class="topbar-brand">Job<span>Hunter</span>3000</div>
+        <div class="topbar-date">{{ now().strftime('%a %b %d, %Y') if now is defined else '—' }}</div>
+    </header>
+
+    <!-- ── Navigation ──────────────────────────────────────── -->
+    {% set active = 'dashboard' %}
+    {% include 'nav.html' %}
+
+    <!-- ── Main Content ────────────────────────────────────── -->
+    <main class="content-area">
+
+        <!-- Mission Header -->
+        <div class="mission-header">
+            <h1>Mission Control</h1>
+            {% if stats.active_pipeline and stats.active_pipeline > 0 %}
+            <p class="momentum-line">You have <strong>{{ stats.active_pipeline }}</strong> application{{ 's' if stats.active_pipeline != 1 else '' }} in active pursuit.</p>
+            {% else %}
+            <p class="momentum-line">No active applications yet. Time to engage some targets.</p>
+            {% endif %}
+        </div>
+
+        <!-- ── Stat Cards ──────────────────────────────────── -->
+        <div class="stat-cards">
+            <!-- Intel Gathered (Total) -->
+            <div class="stat-card stat-card--pipeline">
+                <div class="stat-card__label">Intel Gathered</div>
+                <div class="stat-card__value">{{ stats.total | default(0) }}</div>
+                <div class="stat-card__sub">total jobs tracked</div>
+            </div>
+
+            <!-- Targets Engaged (Applied) -->
+            <div class="stat-card stat-card--applied">
+                <div class="stat-card__label">Targets Engaged</div>
+                <div class="stat-card__value">{{ stats.applied | default(0) }}</div>
+                <div class="stat-card__sub">applications sent</div>
+            </div>
+
+            <!-- Response Rate -->
+            <div class="stat-card stat-card--response">
+                <div class="stat-card__label">Response Rate</div>
+                {% set rate = stats.response_rate | default(0) %}
+                <div class="stat-card__value {% if rate > 20 %}stat-card__value--green{% elif rate > 10 %}stat-card__value--amber{% else %}stat-card__value--red{% endif %}">
+                    {{ rate }}%
+                </div>
+                <div class="stat-card__sub">of applications</div>
+            </div>
+
+            <!-- Top Match -->
+            <div class="stat-card stat-card--topmatch">
+                <div class="stat-card__label">Top Match</div>
+                {% if stats.top_job %}
+                <div class="stat-card__value">{{ stats.top_job.score }}<span style="font-size: 0.9rem; color: var(--text-muted, #8b949e);">/100</span></div>
+                <div class="top-match-title" title="{{ stats.top_job.title }} at {{ stats.top_job.company }}">
+                    {{ stats.top_job.title }} — {{ stats.top_job.company }}
+                </div>
+                {% else %}
+                <div class="stat-card__value" style="font-size: 1rem; color: var(--text-muted, #8b949e);">—</div>
+                <div class="stat-card__sub">No scored jobs yet</div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- ── Pipeline Distribution Bar ───────────────────── -->
+        <div class="pipeline-section">
+            <div class="pipeline-section__title">Pipeline Distribution</div>
+            <div class="pipeline-bar-container">
+                {% set counts = stats.pipeline_counts | default({}) %}
+                {% set total_pipeline = counts.values() | sum if counts else 0 %}
+
+                <div class="pipeline-bar">
+                    {% if total_pipeline > 0 %}
+                        {% for status_name in ['new', 'interested', 'applied', 'interviewing', 'offer', 'rejected', 'hired'] %}
+                            {% set count = counts.get(status_name, 0) if counts.get is defined else counts[status_name] | default(0) %}
+                            {% if count > 0 %}
+                            <div class="pipeline-bar__segment pipeline-bar__segment--{{ status_name }}"
+                                 style="flex-basis: {{ (count / total_pipeline * 100) | round(1) }}%;"
+                                 title="{{ status_name | capitalize }}: {{ count }}">
+                                {{ count }}
+                            </div>
+                            {% endif %}
+                        {% endfor %}
+                    {% else %}
+                        <div class="pipeline-bar__empty">No jobs in pipeline</div>
+                    {% endif %}
+                </div>
+
+                <div class="pipeline-legend">
+                    <div class="pipeline-legend__item">
+                        <div class="pipeline-legend__dot legend-new"></div>
+                        New
+                    </div>
+                    <div class="pipeline-legend__item">
+                        <div class="pipeline-legend__dot legend-interested"></div>
+                        Interested
+                    </div>
+                    <div class="pipeline-legend__item">
+                        <div class="pipeline-legend__dot legend-applied"></div>
+                        Applied
+                    </div>
+                    <div class="pipeline-legend__item">
+                        <div class="pipeline-legend__dot legend-interviewing"></div>
+                        Interviewing
+                    </div>
+                    <div class="pipeline-legend__item">
+                        <div class="pipeline-legend__dot legend-offer"></div>
+                        Offer
+                    </div>
+                    <div class="pipeline-legend__item">
+                        <div class="pipeline-legend__dot legend-rejected"></div>
+                        Rejected
+                    </div>
+                    <div class="pipeline-legend__item">
+                        <div class="pipeline-legend__dot legend-hired"></div>
+                        Hired
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── Two-Column: Activity + Funnel ───────────────── -->
+        <div class="two-col">
+
+            <!-- Recent Activity -->
+            <div class="panel">
+                <div class="panel__title">Recent Activity</div>
+                {% if stats.recent and stats.recent | length > 0 %}
+                <ul class="recent-list">
+                    {% for job in stats.recent[:10] %}
+                    <li class="recent-item">
+                        <span class="status-badge status-badge--{{ job.status | default('new') }}">
+                            {{ job.status | default('new') }}
+                        </span>
+                        <div class="recent-item__info">
+                            <div class="recent-item__title">
+                                {% if job.url %}
+                                <a href="{{ job.url }}" target="_blank" rel="noopener">{{ job.title }}</a>
+                                {% else %}
+                                {{ job.title }}
+                                {% endif %}
+                            </div>
+                            <div class="recent-item__company">{{ job.company | default('Unknown') }}</div>
+                        </div>
+                        <div class="recent-item__meta">
+                            {% if job.score is not none and job.score is defined %}
+                            <span class="score-badge {% if job.score >= 75 %}score-badge--high{% elif job.score >= 50 %}score-badge--mid{% else %}score-badge--low{% endif %}">
+                                {{ job.score }}
+                            </span>
+                            {% endif %}
+                            <span class="recent-item__time">
+                                {{ job.time_ago | default(job.scraped_at | default('—')) }}
+                            </span>
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <div class="empty-state">
+                    <div class="empty-state__icon">&#x1f4e1;</div>
+                    <div>No intel gathered yet. Run a scrape to start tracking.</div>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Pipeline Funnel -->
+            <div class="panel">
+                <div class="panel__title">Pipeline Funnel</div>
+                {% set counts = stats.pipeline_counts | default({}) %}
+                <div class="funnel">
+                    <div class="funnel-step funnel-step--new">
+                        <span class="funnel-step__label">New</span>
+                        <span class="funnel-step__count">{{ counts.get('new', 0) if counts.get is defined else counts.new | default(0) }}</span>
+                    </div>
+                    <div class="funnel-connector"></div>
+
+                    <div class="funnel-step funnel-step--interested">
+                        <span class="funnel-step__label">Interested</span>
+                        <span class="funnel-step__count">{{ counts.get('interested', 0) if counts.get is defined else counts.interested | default(0) }}</span>
+                    </div>
+                    <div class="funnel-connector"></div>
+
+                    <div class="funnel-step funnel-step--applied">
+                        <span class="funnel-step__label">Applied</span>
+                        <span class="funnel-step__count">{{ counts.get('applied', 0) if counts.get is defined else counts.applied | default(0) }}</span>
+                    </div>
+                    <div class="funnel-connector"></div>
+
+                    <div class="funnel-step funnel-step--interviewing">
+                        <span class="funnel-step__label">Interviewing</span>
+                        <span class="funnel-step__count">{{ counts.get('interviewing', 0) if counts.get is defined else counts.interviewing | default(0) }}</span>
+                    </div>
+                    <div class="funnel-connector"></div>
+
+                    <div class="funnel-step funnel-step--offer">
+                        <span class="funnel-step__label">Offer</span>
+                        <span class="funnel-step__count">{{ counts.get('offer', 0) if counts.get is defined else counts.offer | default(0) }}</span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- ── Chat Widget ─────────────────────────────────────── -->
+    {% include 'chat_widget.html' ignore missing %}
+</body>
+</html>

@@ -419,6 +419,171 @@
             to { transform: rotate(360deg); }
         }
 
+        /* ── Profile Card ──────────────────────────────── */
+
+        .profile-card {
+            background: var(--bg-card);
+            border: 1px solid var(--accent-primary);
+            border-radius: 8px;
+            padding: 24px;
+            margin-bottom: 24px;
+            position: relative;
+        }
+
+        .profile-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent-primary), #a855f7, #22d3ee);
+            border-radius: 8px 8px 0 0;
+        }
+
+        .profile-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        .profile-name {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin: 0 0 4px 0;
+        }
+
+        .profile-headline {
+            font-size: 0.95rem;
+            color: var(--accent-primary);
+            margin: 0;
+            font-weight: 500;
+        }
+
+        .profile-narrative {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+            margin-bottom: 20px;
+            padding: 12px 16px;
+            background: rgba(34, 211, 238, 0.04);
+            border-left: 3px solid var(--accent-primary);
+            border-radius: 0 6px 6px 0;
+        }
+
+        .profile-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .profile-section {
+            min-width: 0;
+        }
+
+        .profile-section-label {
+            font-size: 0.72rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+        }
+
+        .profile-unique {
+            grid-column: 1 / -1;
+            font-size: 0.88rem;
+            color: #fbbf24;
+            font-style: italic;
+            padding: 10px 14px;
+            background: rgba(251, 191, 36, 0.06);
+            border-radius: 6px;
+            border: 1px solid rgba(251, 191, 36, 0.15);
+        }
+
+        .profile-meta {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 16px;
+        }
+
+        .profile-meta-item {
+            font-size: 0.82rem;
+            color: var(--text-secondary);
+        }
+
+        .profile-meta-item strong {
+            color: var(--text-primary);
+        }
+
+        .work-history-item {
+            padding: 8px 0;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.85rem;
+        }
+
+        .work-history-item:last-child {
+            border-bottom: none;
+        }
+
+        .work-title {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .work-company {
+            color: var(--text-secondary);
+        }
+
+        .work-duration {
+            color: var(--text-muted);
+            font-size: 0.78rem;
+        }
+
+        /* ── Analyze All Button ──────────────────────────── */
+
+        .arsenal-actions {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .btn-lg {
+            padding: 12px 28px;
+            font-size: 0.95rem;
+        }
+
+        .analyze-progress {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-left: 12px;
+            display: none;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .analyze-progress.visible {
+            display: inline-flex;
+        }
+
+        @media (max-width: 768px) {
+            .profile-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .profile-header {
+                flex-direction: column;
+            }
+
+            .profile-meta {
+                flex-direction: column;
+                gap: 4px;
+            }
+        }
+
         /* ── Empty State ─────────────────────────────────── */
 
         .empty-state {
@@ -495,13 +660,156 @@
         </div>
 
         <!-- ════════════════════════════════════════════════════
+             Candidate Profile (synthesized from all resumes)
+             ════════════════════════════════════════════════════ -->
+        {% if profile %}
+        <div class="profile-card">
+            <div class="profile-header">
+                <div>
+                    <h2 class="profile-name">{{ profile.name or 'Candidate Profile' }}</h2>
+                    <p class="profile-headline">{{ profile.headline or '' }}</p>
+                </div>
+                <div class="profile-meta">
+                    {% if profile.experience_years %}
+                    <div class="profile-meta-item"><strong>{{ profile.experience_years }}+</strong> years exp.</div>
+                    {% endif %}
+                    {% if profile.experience_level %}
+                    <div class="profile-meta-item">Level: <strong>{{ profile.experience_level | title }}</strong></div>
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if profile.narrative %}
+            <div class="profile-narrative">{{ profile.narrative }}</div>
+            {% endif %}
+
+            <div class="profile-grid">
+                {% if profile.core_strengths %}
+                <div class="profile-section">
+                    <div class="profile-section-label">Core Strengths</div>
+                    <div class="pills">
+                        {% for s in profile.core_strengths %}
+                        <span class="pill pill-green">{{ s }}</span>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if profile.target_roles %}
+                <div class="profile-section">
+                    <div class="profile-section-label">Target Roles</div>
+                    <div class="pills">
+                        {% for r in profile.target_roles %}
+                        <span class="pill pill-cyan">{{ r }}</span>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if profile.industries %}
+                <div class="profile-section">
+                    <div class="profile-section-label">Industries</div>
+                    <div class="pills">
+                        {% for i in profile.industries %}
+                        <span class="pill pill-muted">{{ i }}</span>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if profile.all_skills %}
+                <div class="profile-section">
+                    <div class="profile-section-label">Skills</div>
+                    <div class="pills">
+                        {% for s in profile.all_skills %}
+                        <span class="pill pill-muted">{{ s }}</span>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if profile.work_history %}
+                <div class="profile-section" style="grid-column: 1 / -1;">
+                    <div class="profile-section-label">Work History</div>
+                    {% for job in profile.work_history %}
+                    <div class="work-history-item">
+                        <span class="work-title">{{ job.title }}</span>
+                        <span class="work-company">@ {{ job.company }}</span>
+                        <span class="work-duration">({{ job.duration }})</span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                {% if profile.gaps %}
+                <div class="profile-section">
+                    <div class="profile-section-label">Gaps to Address</div>
+                    <div class="pills">
+                        {% for g in profile.gaps %}
+                        <span class="pill pill-red">{{ g }}</span>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if profile.education %}
+                <div class="profile-section">
+                    <div class="profile-section-label">Education</div>
+                    <div class="pills">
+                        {% for e in profile.education %}
+                        <span class="pill pill-muted">{{ e }}</span>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if profile.unique_value %}
+                <div class="profile-unique">{{ profile.unique_value }}</div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- ════════════════════════════════════════════════════
+             Actions Bar
+             ════════════════════════════════════════════════════ -->
+        {% if resumes %}
+        <div class="arsenal-actions" style="flex-wrap: wrap; align-items: center;">
+            <button class="btn btn-primary btn-lg" id="analyzeAllBtn" onclick="analyzeAll()">
+                Analyze All &amp; Build Profile
+            </button>
+            <select id="modelOverride" style="
+                background: var(--bg-nav); color: var(--text-primary); border: 1px solid var(--border);
+                border-radius: 6px; padding: 8px 12px; font-size: 0.85rem; font-family: inherit;
+            ">
+                <option value="">Default model</option>
+                <optgroup label="OpenRouter">
+                    <option value="anthropic/claude-sonnet-4">Sonnet 4</option>
+                    <option value="anthropic/claude-opus-4">Opus 4</option>
+                    <option value="google/gemini-2.5-pro-preview">Gemini 2.5 Pro</option>
+                    <option value="openai/gpt-4o">GPT-4o</option>
+                    <option value="deepseek/deepseek-r1">DeepSeek R1</option>
+                </optgroup>
+            </select>
+            <label style="display: flex; align-items: center; gap: 6px; font-size: 0.82rem; color: var(--text-secondary); cursor: pointer;">
+                <input type="checkbox" id="forceReanalyze" style="accent-color: var(--accent-primary);">
+                Re-analyze all
+            </label>
+            <span class="analyze-progress" id="analyzeProgress">
+                <span class="spinner"></span>
+                <span id="analyzeProgressText">Analyzing resumes...</span>
+            </span>
+        </div>
+        {% endif %}
+
+        <!-- ════════════════════════════════════════════════════
              Upload Section
              ════════════════════════════════════════════════════ -->
         <div class="upload-card">
             <h2>Upload Resume</h2>
 
             <div class="drop-zone" id="dropZone">
-                <input type="file" id="fileInput" accept=".pdf,.docx,.md,.txt" />
+                <input type="file" id="fileInput" accept=".pdf,.docx,.md,.txt" multiple />
                 <div class="drop-zone-icon">&#128196;</div>
                 <div class="drop-zone-text">
                     Drag &amp; drop a file here or <strong>click to browse</strong>
@@ -622,9 +930,14 @@
         fileInput.addEventListener('change', handleFileSelected);
 
         function handleFileSelected() {
-            const file = fileInput.files[0];
-            if (file) {
-                uploadFilename.textContent = file.name;
+            const files = fileInput.files;
+            if (files.length > 1) {
+                uploadFilename.textContent = files.length + ' files selected';
+                uploadFilename.classList.add('has-file');
+                uploadBtn.disabled = false;
+                hideMessage();
+            } else if (files.length === 1) {
+                uploadFilename.textContent = files[0].name;
                 uploadFilename.classList.add('has-file');
                 uploadBtn.disabled = false;
                 hideMessage();
@@ -637,33 +950,43 @@
 
         // ── Upload ────────────────────────────────────────────
         async function uploadResume() {
-            const file = fileInput.files[0];
-            if (!file) return;
+            const files = fileInput.files;
+            if (!files.length) return;
 
             uploadBtn.disabled = true;
-            uploadBtn.innerHTML = '<span class="spinner"></span> Uploading...';
-            hideMessage();
+            const total = files.length;
+            let uploaded = 0;
+            let errors = [];
 
-            const formData = new FormData();
-            formData.append('file', file);
+            for (let i = 0; i < files.length; i++) {
+                uploadBtn.innerHTML = '<span class="spinner"></span> Uploading ' + (i + 1) + '/' + total + '...';
 
-            try {
-                const resp = await fetch('/api/resumes/upload', {
-                    method: 'POST',
-                    body: formData
-                });
+                const formData = new FormData();
+                formData.append('file', files[i]);
 
-                if (!resp.ok) {
-                    const err = await resp.json().catch(() => ({}));
-                    throw new Error(err.detail || err.error || `Upload failed (${resp.status})`);
+                try {
+                    const resp = await fetch('/api/resumes/upload', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    if (!resp.ok) {
+                        const err = await resp.json().catch(() => ({}));
+                        errors.push(files[i].name + ': ' + (err.detail || err.error || resp.status));
+                    } else {
+                        uploaded++;
+                    }
+                } catch (err) {
+                    errors.push(files[i].name + ': ' + err.message);
                 }
+            }
 
-                showMessage('success', 'Resume uploaded successfully. Reloading...');
+            if (errors.length) {
+                showMessage('error', uploaded + '/' + total + ' uploaded. Errors: ' + errors.join('; '));
+                if (uploaded > 0) setTimeout(() => window.location.reload(), 2000);
+            } else {
+                showMessage('success', uploaded + ' resume' + (uploaded > 1 ? 's' : '') + ' uploaded. Reloading...');
                 setTimeout(() => window.location.reload(), 800);
-            } catch (err) {
-                showMessage('error', err.message);
-                uploadBtn.disabled = false;
-                uploadBtn.innerHTML = 'Upload';
             }
         }
 
@@ -831,6 +1154,50 @@
                 html += '</div>';
                 section.innerHTML = html;
             });
+        }
+
+        // ── Analyze All ──────────────────────────────────────
+        async function analyzeAll() {
+            const btn = document.getElementById('analyzeAllBtn');
+            const progress = document.getElementById('analyzeProgress');
+            const progressText = document.getElementById('analyzeProgressText');
+            const modelSelect = document.getElementById('modelOverride');
+            const forceCheckbox = document.getElementById('forceReanalyze');
+
+            const model = modelSelect ? modelSelect.value : '';
+            const force = forceCheckbox ? forceCheckbox.checked : false;
+
+            btn.disabled = true;
+            const modelLabel = model ? (' with ' + modelSelect.options[modelSelect.selectedIndex].text) : '';
+            btn.innerHTML = '<span class="spinner"></span> Working...';
+            progress.classList.add('visible');
+            progressText.textContent = (force ? 'Re-analyzing' : 'Analyzing') + ' resumes' + modelLabel + '...';
+
+            try {
+                const resp = await fetch('/api/resumes/analyze-all', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({force: force, model: model || null})
+                });
+
+                if (!resp.ok) {
+                    const err = await resp.json().catch(() => ({}));
+                    throw new Error(err.detail || err.error || 'Analysis failed (' + resp.status + ')');
+                }
+
+                const data = await resp.json();
+                let msg = 'Done! ' + data.analyzed + ' analyzed';
+                if (data.skipped) msg += ', ' + data.skipped + ' already done';
+                if (data.errors && data.errors.length) msg += ', ' + data.errors.length + ' errors';
+                progressText.textContent = msg + '. Reloading...';
+
+                setTimeout(() => window.location.reload(), 1200);
+            } catch (err) {
+                btn.disabled = false;
+                btn.innerHTML = 'Analyze All &amp; Build Profile';
+                progressText.textContent = 'Error: ' + err.message;
+                progress.classList.add('visible');
+            }
         }
 
         // Run on load

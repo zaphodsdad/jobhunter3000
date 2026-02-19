@@ -1,0 +1,230 @@
+"""
+Job scoring — LLM rates jobs 0-100 against the candidate profile and search preferences.
+"""
+
+import json
+from services.llm import llm_chat
+from services.resumes import load_candidate_profile
+from services.settings import load_settings
+
+
+def score_job(job: dict, settings: dict, profile: dict = None) -> dict:
+    """Score a single job against the candidate profile. Returns score dict."""
+    if not profile:
+        profile = load_candidate_profile()
+
+    if not profile:
+        return {"score": 0, "pros": [], "cons": ["No candidate profile available"], "fit_summary": "Cannot score without a candidate profile."}
+
+    # Quick dealbreaker check (keyword match, no LLM needed)
+    dealbreakers = settings.get("candidate_dealbreakers", [])
+    job_text = f"{job.get('title', '')} {job.get('description', '')} {job.get('company', '')}".lower()
+    for db in dealbreakers:
+        if db.lower() in job_text:
+            return {
+                "score": 0,
+                "pros": [],
+                "cons": [f"Dealbreaker: contains '{db}'"],
+                "fit_summary": f"Auto-rejected: job contains dealbreaker keyword '{db}'.",
+            }
+
+    # Build the scoring prompt
+    prefs = {
+        "location": settings.get("candidate_location", ""),
+        "radius_miles": settings.get("candidate_radius_miles", 30),
+        "salary_min": settings.get("candidate_salary_min", 0),
+        "salary_max": settings.get("candidate_salary_max", 0),
+        "work_mode": settings.get("candidate_work_mode", "any"),
+        "target_roles": settings.get("candidate_target_roles", []),
+        "target_industries": settings.get("candidate_target_industries", []),
+        "nice_to_haves": settings.get("candidate_nice_to_haves", []),
+        "willing_to_travel": settings.get("candidate_willing_to_travel", 10),
+    }
+
+    job_info = (
+        f"Title: {job.get('title', 'Unknown')}\n"
+        f"Company: {job.get('company', 'Unknown')}\n"
+        f"Location: {job.get('location', 'Unknown')}\n"
+        f"Industry: {job.get('industry', 'Unknown')}\n"
+        f"Salary: {job.get('salary_text', 'Not listed')}\n"
+        f"Source: {job.get('source', 'Unknown')}\n"
+        f"Description:\n{(job.get('description', '') or '')[:3000]}"
+    )
+
+    prompt = f"""You are a job match analyst. Score how well this job matches the candidate on a scale of 0-100.
+
+CANDIDATE PROFILE:
+Name: {profile.get('name', 'Unknown')}
+Headline: {profile.get('headline', '')}
+Experience: {profile.get('experience_years', 0)}+ years, {profile.get('experience_level', 'unknown')} level
+Core Strengths: {', '.join(profile.get('core_strengths', []))}
+Skills: {', '.join(profile.get('all_skills', [])[:20])}
+Industries: {', '.join(profile.get('industries', []))}
+Target Roles: {', '.join(profile.get('target_roles', []))}
+Unique Value: {profile.get('unique_value', '')}
+
+SEARCH PREFERENCES:
+Preferred Location: {prefs['location']} (within {prefs['radius_miles']} miles)
+Salary Range: ${prefs['salary_min']:,} - ${prefs['salary_max']:,}{' (flexible on upper)' if prefs['salary_max'] == 0 else ''}
+Work Mode: {prefs['work_mode']}
+Target Roles: {', '.join(prefs['target_roles']) if prefs['target_roles'] else 'See candidate profile'}
+Target Industries: {', '.join(prefs['target_industries']) if prefs['target_industries'] else 'See candidate profile'}
+Nice-to-Haves: {', '.join(prefs['nice_to_haves']) if prefs['nice_to_haves'] else 'None specified'}
+Max Travel: {prefs['willing_to_travel']}%
+
+JOB POSTING:
+{job_info}
+
+SCORING GUIDE:
+- 90-100: Perfect match — right role, right location, right pay, strong skill overlap
+- 70-89: Strong match — most criteria met, worth applying
+- 50-69: Moderate match — some fit, might be a stretch or compromise
+- 30-49: Weak match — significant gaps or misalignment
+- 0-29: Poor match — wrong field, wrong location, or doesn't fit at all
+
+Return ONLY valid JSON (no markdown fences):
+{{"score": 0, "pros": ["pro 1", "pro 2", "pro 3"], "cons": ["con 1", "con 2"], "fit_summary": "One sentence explaining the fit."}}"""
+
+    result = llm_chat(
+        [{"role": "user", "content": prompt}],
+        settings,
+    )
+
+    # Parse JSON
+    try:
+        cleaned = result.strip()
+        if cleaned.startswith("```"):
+            cleaned = cleaned.split("\n", 1)[1]
+            if cleaned.endswith("```"):
+                cleaned = cleaned.rsplit("```", 1)[0]
+        data = json.loads(cleaned)
+        # Ensure score is int 0-100
+        data["score"] = max(0, min(100, int(data.get("score", 0))))
+        return data
+    except (json.JSONDecodeError, ValueError):
+        return {
+            "score": 0,
+            "pros": [],
+            "cons": ["Failed to parse scoring response"],
+            "fit_summary": result[:200],
+        }
+
+
+def score_jobs(conn, settings: dict = None, job_ids: list = None, force: bool = False) -> dict:
+    """Score multiple jobs. Returns summary of results."""
+    if not settings:
+        settings = load_settings()
+
+    profile = load_candidate_profile()
+    if not profile:
+        return {"error": "No candidate profile. Analyze resumes first.", "scored": 0}
+
+    # Get jobs to score
+    if job_ids:
+        placeholders = ",".join("?" * len(job_ids))
+        rows = conn.execute(f"SELECT * FROM jobs WHERE id IN ({placeholders})", job_ids).fetchall()
+    elif force:
+        rows = conn.execute("SELECT * FROM jobs ORDER BY id").fetchall()
+    else:
+        rows = conn.execute("SELECT * FROM jobs WHERE score IS NULL ORDER BY id").fetchall()
+
+    jobs = [dict(r) for r in rows]
+    results = {"scored": 0, "skipped": 0, "errors": []}
+
+    for job in jobs:
+        if job.get("score") is not None and not force:
+            results["skipped"] += 1
+            continue
+
+        try:
+            score_data = score_job(job, settings, profile)
+            conn.execute(
+                """UPDATE jobs SET score = ?, pros = ?, cons = ?, fit_summary = ?,
+                   score_details = ?, updated_at = datetime('now')
+                   WHERE id = ?""",
+                (
+                    score_data["score"],
+                    json.dumps(score_data.get("pros", [])),
+                    json.dumps(score_data.get("cons", [])),
+                    score_data.get("fit_summary", ""),
+                    json.dumps(score_data),
+                    job["id"],
+                ),
+            )
+            conn.commit()
+            results["scored"] += 1
+        except Exception as e:
+            results["errors"].append(f"Job {job['id']} ({job.get('title', '?')}): {str(e)}")
+
+    return results
+
+
+def suggest_searches(settings: dict = None, profile: dict = None) -> dict:
+    """Use AI to suggest search queries and target companies based on candidate profile."""
+    if not settings:
+        settings = load_settings()
+    if not profile:
+        profile = load_candidate_profile()
+
+    if not profile:
+        return {"error": "No candidate profile. Analyze resumes first."}
+
+    prefs = {
+        "location": settings.get("candidate_location", ""),
+        "target_roles": settings.get("candidate_target_roles", []),
+        "target_industries": settings.get("candidate_target_industries", []),
+        "salary_min": settings.get("candidate_salary_min", 0),
+    }
+
+    prompt = f"""You are a career strategist and job search expert. Based on this candidate's profile and preferences, suggest search strategies they HAVEN'T thought of.
+
+CANDIDATE:
+{profile.get('name', 'Unknown')} — {profile.get('headline', '')}
+{profile.get('experience_years', 0)}+ years experience
+Skills: {', '.join(profile.get('all_skills', [])[:25])}
+Industries: {', '.join(profile.get('industries', []))}
+Current Target Roles: {', '.join(prefs['target_roles']) if prefs['target_roles'] else ', '.join(profile.get('target_roles', []))}
+Location: {prefs['location']}
+Salary Target: ${prefs['salary_min']:,}+
+
+Work History:
+{chr(10).join(f"- {j['title']} @ {j['company']} ({j['duration']})" for j in profile.get('work_history', []))}
+
+Unique Value: {profile.get('unique_value', '')}
+
+Think creatively. This person has transferable skills they may not realize are valuable. Consider:
+- Companies in their area that need their specific mix of skills
+- Industries they haven't considered that value ops/facility/technical experience
+- Job title variations they might not be searching for
+- Niche roles that combine their unusual skill set (ops + tech + CNC + e-commerce)
+
+Return ONLY valid JSON (no markdown fences):
+{{
+    "suggested_searches": [
+        {{"query": "search query text", "reason": "why this would find good matches"}},
+        {{"query": "another query", "reason": "why"}}
+    ],
+    "target_companies": [
+        {{"name": "Company Name", "reason": "why they'd be a good fit", "likely_roles": ["role 1"]}}
+    ],
+    "unexpected_industries": [
+        {{"industry": "Industry Name", "reason": "why their skills transfer here"}}
+    ],
+    "title_variations": ["Job Title 1", "Job Title 2"],
+    "strategy_notes": "1-2 sentences of overall search strategy advice"
+}}"""
+
+    result = llm_chat(
+        [{"role": "user", "content": prompt}],
+        settings,
+    )
+
+    try:
+        cleaned = result.strip()
+        if cleaned.startswith("```"):
+            cleaned = cleaned.split("\n", 1)[1]
+            if cleaned.endswith("```"):
+                cleaned = cleaned.rsplit("```", 1)[0]
+        return json.loads(cleaned)
+    except json.JSONDecodeError:
+        return {"error": "Failed to parse suggestions", "raw": result[:500]}

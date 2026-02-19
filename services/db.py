@@ -189,7 +189,7 @@ def get_job(conn: sqlite3.Connection, job_id: int) -> dict | None:
 
 def update_job_status(conn: sqlite3.Connection, job_id: int, new_status: str) -> bool:
     """Update a job's status."""
-    valid_statuses = {"new", "interested", "applied", "interviewing", "rejected", "offer", "accepted"}
+    valid_statuses = {"new", "interested", "applied", "interviewing", "rejected", "offer", "accepted", "archived"}
     if new_status not in valid_statuses:
         return False
 

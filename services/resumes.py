@@ -152,6 +152,106 @@ def update_resume_analysis(conn, resume_id: int, analysis: dict) -> bool:
     return True
 
 
+def synthesize_candidate_profile(conn, settings: dict) -> dict:
+    """Combine all resume analyses into a unified candidate profile."""
+    from services.llm import llm_chat
+
+    # Gather all resume content texts
+    rows = conn.execute(
+        "SELECT id, original_name, content_text, analysis FROM resumes ORDER BY id"
+    ).fetchall()
+
+    if not rows:
+        return {"error": "No resumes uploaded"}
+
+    # Build a combined view of all resumes for the LLM
+    combined = ""
+    for r in rows:
+        combined += f"\n--- RESUME: {r['original_name']} ---\n"
+        text = r["content_text"] or ""
+        combined += text[:4000] + "\n"
+
+    # Also include any existing per-resume analyses as extra signal
+    analyses = []
+    for r in rows:
+        if r["analysis"]:
+            try:
+                analyses.append(json.loads(r["analysis"]))
+            except json.JSONDecodeError:
+                pass
+
+    analysis_summary = ""
+    if analyses:
+        analysis_summary = "\n\nPREVIOUS PER-RESUME ANALYSES (for reference):\n"
+        for i, a in enumerate(analyses):
+            analysis_summary += f"\nResume {i+1}: {json.dumps(a, indent=2)[:1500]}\n"
+
+    prompt = """You are building a comprehensive candidate profile from multiple resumes belonging to the SAME person. These resumes target different roles and industries, so together they paint the complete picture.
+
+Analyze ALL the resumes below and return ONLY valid JSON (no markdown fences, no explanation).
+
+{
+    "name": "Candidate's full name",
+    "headline": "One powerful sentence describing this candidate overall",
+    "experience_years": 0,
+    "experience_level": "entry/mid/senior/executive",
+    "core_strengths": ["strength 1", "strength 2", "strength 3", "strength 4", "strength 5"],
+    "all_skills": ["every skill mentioned across all resumes"],
+    "industries": ["every industry they have experience in"],
+    "target_roles": ["all role types they could pursue, based on combined experience"],
+    "work_history": [
+        {"title": "Job Title", "company": "Company", "duration": "X years", "highlights": ["key achievement"]}
+    ],
+    "education": ["degree or certification"],
+    "unique_value": "What makes this candidate stand out from the crowd — the thing a hiring manager would remember",
+    "gaps": ["honest assessment of weaknesses or missing qualifications"],
+    "narrative": "A 3-4 sentence narrative summary a recruiter could use to pitch this candidate. Write in third person. Be specific about accomplishments and numbers."
+}
+
+RESUMES:
+""" + combined[:12000] + analysis_summary[:3000]
+
+    result = llm_chat(
+        [{"role": "user", "content": prompt}],
+        settings,
+    )
+
+    # Parse JSON
+    try:
+        cleaned = result.strip()
+        if cleaned.startswith("```"):
+            cleaned = cleaned.split("\n", 1)[1]
+            if cleaned.endswith("```"):
+                cleaned = cleaned.rsplit("```", 1)[0]
+        profile = json.loads(cleaned)
+    except json.JSONDecodeError:
+        profile = {
+            "headline": "Profile synthesis failed — raw response saved",
+            "narrative": result[:500],
+            "raw_response": result,
+        }
+
+    # Save to disk
+    profile_path = os.path.join(
+        os.path.dirname(os.path.dirname(__file__)), "data", "candidate_profile.json"
+    )
+    with open(profile_path, "w") as f:
+        json.dump(profile, f, indent=2)
+
+    return profile
+
+
+def load_candidate_profile() -> dict | None:
+    """Load the synthesized candidate profile if it exists."""
+    profile_path = os.path.join(
+        os.path.dirname(os.path.dirname(__file__)), "data", "candidate_profile.json"
+    )
+    if os.path.exists(profile_path):
+        with open(profile_path) as f:
+            return json.load(f)
+    return None
+
+
 def delete_resume(conn, resume_id: int) -> bool:
     """Delete a resume record and file."""
     resume = get_resume(conn, resume_id)

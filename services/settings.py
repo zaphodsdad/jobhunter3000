@@ -8,9 +8,11 @@ import os
 SETTINGS_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "settings.json")
 
 DEFAULTS = {
-    "llm_provider": "openrouter",       # "openrouter" or "ollama"
+    "llm_provider": "openrouter",       # "openrouter", "google", or "ollama"
     "openrouter_api_key": "",
     "openrouter_model": "anthropic/claude-sonnet-4",
+    "google_api_key": "",
+    "google_model": "gemini-2.0-flash",
     "ollama_endpoint": "http://localhost:11434",
     "ollama_model": "qwen2.5-coder:32b",
     "pushover_user_key": "",
@@ -71,6 +73,19 @@ DEFAULTS = {
         "CDL required",
     ],
     "max_days_old": 14,
+    # Candidate search preferences (Dossier page)
+    "candidate_name": "",
+    "candidate_location": "",
+    "candidate_radius_miles": 30,
+    "candidate_salary_min": 50000,
+    "candidate_salary_max": 100000,
+    "candidate_work_mode": "any",          # "onsite", "remote", "hybrid", "any"
+    "candidate_target_roles": [],           # free-text list of target role titles
+    "candidate_target_industries": [],      # industries of interest
+    "candidate_dealbreakers": [],           # auto-reject if job contains these
+    "candidate_nice_to_haves": [],          # boost score if job mentions these
+    "candidate_willing_to_travel": 10,      # max travel percentage
+    "candidate_elevator_pitch": "",         # short pitch for cover letters / outreach
 }
 
 

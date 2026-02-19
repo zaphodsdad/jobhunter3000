@@ -64,6 +64,9 @@
 
         .radio-group label:last-child {
             border-radius: 0 6px 6px 0;
+        }
+
+        .radio-group label:not(:first-child) {
             border-left: none;
         }
 
@@ -250,6 +253,11 @@
                 <label for="provider-openrouter" id="label-openrouter"
                        class="{% if settings.llm_provider == 'openrouter' %}selected{% endif %}">OpenRouter</label>
 
+                <input type="radio" name="llm_provider" id="provider-google" value="google"
+                       {% if settings.llm_provider == 'google' %}checked{% endif %}>
+                <label for="provider-google" id="label-google"
+                       class="{% if settings.llm_provider == 'google' %}selected{% endif %}">Google Gemini</label>
+
                 <input type="radio" name="llm_provider" id="provider-ollama" value="ollama"
                        {% if settings.llm_provider == 'ollama' %}checked{% endif %}>
                 <label for="provider-ollama" id="label-ollama"
@@ -272,6 +280,25 @@
                     <input type="text" id="openrouter_model" name="openrouter_model"
                            value="{{ settings.openrouter_model }}"
                            placeholder="anthropic/claude-sonnet-4">
+                </div>
+            </div>
+
+            <!-- Google Gemini fields -->
+            <div id="google-fields" class="provider-fields {% if settings.llm_provider == 'google' %}active{% endif %}">
+                <div class="form-group">
+                    <label for="google_api_key">API Key</label>
+                    <div class="input-with-toggle">
+                        <input type="password" id="google_api_key" name="google_api_key"
+                               value="{{ settings.google_api_key }}"
+                               placeholder="AIza...">
+                        <button type="button" class="toggle-visibility" onclick="toggleGoogleKey()" id="toggle-google-btn">SHOW</button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="google_model">Model</label>
+                    <input type="text" id="google_model" name="google_model"
+                           value="{{ settings.google_model }}"
+                           placeholder="gemini-2.0-flash">
                 </div>
             </div>
 
@@ -404,34 +431,44 @@
 <!-- ── JavaScript ─────────────────────────────────────────── -->
 <script>
     // ── Provider toggle ─────────────────────────────────────
-    const radioOpenRouter = document.getElementById('provider-openrouter');
-    const radioOllama = document.getElementById('provider-ollama');
-    const labelOpenRouter = document.getElementById('label-openrouter');
-    const labelOllama = document.getElementById('label-ollama');
-    const fieldsOpenRouter = document.getElementById('openrouter-fields');
-    const fieldsOllama = document.getElementById('ollama-fields');
+    const providers = ['openrouter', 'google', 'ollama'];
 
     function updateProviderFields() {
-        if (radioOpenRouter.checked) {
-            fieldsOpenRouter.classList.add('active');
-            fieldsOllama.classList.remove('active');
-            labelOpenRouter.classList.add('selected');
-            labelOllama.classList.remove('selected');
-        } else {
-            fieldsOllama.classList.add('active');
-            fieldsOpenRouter.classList.remove('active');
-            labelOllama.classList.add('selected');
-            labelOpenRouter.classList.remove('selected');
-        }
+        const selected = document.querySelector('input[name="llm_provider"]:checked').value;
+        providers.forEach(function(p) {
+            const fields = document.getElementById(p + '-fields');
+            const label = document.getElementById('label-' + p);
+            if (p === selected) {
+                if (fields) fields.classList.add('active');
+                if (label) label.classList.add('selected');
+            } else {
+                if (fields) fields.classList.remove('active');
+                if (label) label.classList.remove('selected');
+            }
+        });
     }
 
-    radioOpenRouter.addEventListener('change', updateProviderFields);
-    radioOllama.addEventListener('change', updateProviderFields);
+    providers.forEach(function(p) {
+        var radio = document.getElementById('provider-' + p);
+        if (radio) radio.addEventListener('change', updateProviderFields);
+    });
 
     // ── API key show/hide ───────────────────────────────────
     function toggleApiKey() {
         const input = document.getElementById('openrouter_api_key');
         const btn = document.getElementById('toggle-key-btn');
+        if (input.type === 'password') {
+            input.type = 'text';
+            btn.textContent = 'HIDE';
+        } else {
+            input.type = 'password';
+            btn.textContent = 'SHOW';
+        }
+    }
+
+    function toggleGoogleKey() {
+        const input = document.getElementById('google_api_key');
+        const btn = document.getElementById('toggle-google-btn');
         if (input.type === 'password') {
             input.type = 'text';
             btn.textContent = 'HIDE';

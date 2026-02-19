@@ -52,6 +52,10 @@ data/cover-letters/
 # Templates are OK to commit (no personal data in templates)
 !data/templates/
 
+# Settings & Profile (contain API keys, personal data, search criteria)
+data/settings.json
+data/candidate_profile.json
+
 # Config files (contain API keys, network IPs, personal search criteria)
 config.yaml
 config/*.yaml
@@ -65,6 +69,10 @@ logs/*.txt
 # Generated documents
 *.pdf
 *.docx
+
+# Test data (contains personal job search data)
+tests/*.xlsx
+tests/*.csv
 
 # OS
 .DS_Store

@@ -421,6 +421,7 @@
                 <option value="applied" {% if job.status == 'applied' %}selected{% endif %}>Applied</option>
                 <option value="interviewing" {% if job.status == 'interviewing' %}selected{% endif %}>Interviewing</option>
                 <option value="offer" {% if job.status == 'offer' %}selected{% endif %}>Offer</option>
+                <option value="accepted" {% if job.status == 'accepted' %}selected{% endif %}>Accepted</option>
                 <option value="rejected" {% if job.status == 'rejected' %}selected{% endif %}>Rejected</option>
                 <option value="archived" {% if job.status == 'archived' %}selected{% endif %}>Archived</option>
               </select>
@@ -574,11 +575,30 @@
             badge.className = 'status-badge status-' + newStatus;
             badge.textContent = newStatus.charAt(0).toUpperCase() + newStatus.slice(1);
           }
+
+          // Flash green to confirm save
+          row.style.transition = 'background 0.3s';
+          row.style.background = 'rgba(74, 222, 128, 0.08)';
+          setTimeout(function() { row.style.background = ''; }, 800);
+
+          // Fade out rejected/archived rows after a moment
+          if (newStatus === 'rejected' || newStatus === 'archived') {
+            setTimeout(function() {
+              row.style.transition = 'opacity 0.5s';
+              row.style.opacity = '0.3';
+            }, 1000);
+          }
         }
       })
       .catch(function(err) {
         console.error('Failed to update status:', err);
-        alert('Failed to update status. Check the console for details.');
+        // Flash red on error
+        var row = selectEl.closest('tr.job-row');
+        if (row) {
+          row.style.transition = 'background 0.3s';
+          row.style.background = 'rgba(239, 68, 68, 0.1)';
+          setTimeout(function() { row.style.background = ''; }, 1500);
+        }
       });
     }
 

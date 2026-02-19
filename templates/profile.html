@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dossier — JobHunter3000</title>
+    <style>
+        {% include 'base_styles.html' %}
+
+        /* ── Profile page styles ─────────────────────────── */
+
+        .content-area {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 1.5rem 2rem 3rem;
+        }
+
+        .page-header {
+            margin-bottom: 1.5rem;
+        }
+
+        .page-header h1 {
+            color: var(--text-primary);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            font-size: 0.85rem;
+            margin: 0 0 0.25rem 0;
+        }
+
+        .page-header h1::before {
+            content: '//';
+            color: var(--accent-primary);
+            margin-right: 0.5rem;
+        }
+
+        .page-header p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin: 0;
+        }
+
+        /* ── Section Cards ──────────────────────────────── */
+
+        .section-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+
+        .section-card h2 {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin: 0 0 4px 0;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .section-card h2::before {
+            content: '// ';
+            color: var(--accent-primary);
+        }
+
+        .section-desc {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin: 0 0 20px 0;
+        }
+
+        /* ── Profile Card (AI-generated) ────────────────── */
+
+        .profile-card {
+            background: var(--bg-card);
+            border: 1px solid var(--accent-primary);
+            border-radius: 8px;
+            padding: 24px;
+            margin-bottom: 24px;
+            position: relative;
+        }
+
+        .profile-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent-primary), #a855f7, #22d3ee);
+            border-radius: 8px 8px 0 0;
+        }
+
+        .profile-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        .profile-name {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin: 0 0 4px 0;
+        }
+
+        .profile-headline {
+            font-size: 0.95rem;
+            color: var(--accent-primary);
+            margin: 0;
+            font-weight: 500;
+        }
+
+        .profile-narrative {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+            margin-bottom: 20px;
+            padding: 12px 16px;
+            background: rgba(34, 211, 238, 0.04);
+            border-left: 3px solid var(--accent-primary);
+            border-radius: 0 6px 6px 0;
+        }
+
+        .profile-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .profile-section {
+            min-width: 0;
+        }
+
+        .profile-section-label {
+            font-size: 0.72rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+        }
+
+        .profile-unique {
+            grid-column: 1 / -1;
+            font-size: 0.88rem;
+            color: #fbbf24;
+            font-style: italic;
+            padding: 10px 14px;
+            background: rgba(251, 191, 36, 0.06);
+            border-radius: 6px;
+            border: 1px solid rgba(251, 191, 36, 0.15);
+        }
+
+        .profile-meta {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 16px;
+        }
+
+        .profile-meta-item {
+            font-size: 0.82rem;
+            color: var(--text-secondary);
+        }
+
+        .profile-meta-item strong {
+            color: var(--text-primary);
+        }
+
+        .work-history-item {
+            padding: 8px 0;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.85rem;
+        }
+
+        .work-history-item:last-child {
+            border-bottom: none;
+        }
+
+        .work-title {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .work-company {
+            color: var(--text-secondary);
+        }
+
+        .work-duration {
+            color: var(--text-muted);
+            font-size: 0.78rem;
+        }
+
+        .pills {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .pill {
+            display: inline-block;
+            padding: 3px 10px;
+            font-size: 0.72rem;
+            font-weight: 600;
+            border-radius: 20px;
+            white-space: nowrap;
+        }
+
+        .pill-green { background: rgba(74, 222, 128, 0.12); color: #4ade80; }
+        .pill-cyan { background: rgba(34, 211, 238, 0.12); color: #22d3ee; }
+        .pill-red { background: rgba(239, 68, 68, 0.1); color: #888; }
+        .pill-muted { background: rgba(107, 114, 128, 0.12); color: #9ca3af; }
+        .pill-amber { background: rgba(251, 191, 36, 0.12); color: #fbbf24; }
+
+        .no-profile-msg {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-muted);
+        }
+
+        .no-profile-msg p {
+            margin: 8px 0;
+            font-size: 0.9rem;
+        }
+
+        .no-profile-msg a {
+            color: var(--accent-primary);
+            text-decoration: none;
+        }
+
+        .no-profile-msg a:hover {
+            text-decoration: underline;
+        }
+
+        /* ── Collapsible profile ────────────────────────── */
+
+        .profile-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .profile-toggle .toggle-icon {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            transition: transform 0.2s;
+        }
+
+        .profile-toggle .toggle-icon.collapsed {
+            transform: rotate(-90deg);
+        }
+
+        .profile-body {
+            overflow: hidden;
+            transition: max-height 0.3s ease, opacity 0.2s ease;
+            max-height: 2000px;
+            opacity: 1;
+        }
+
+        .profile-body.collapsed {
+            max-height: 0;
+            opacity: 0;
+        }
+
+        .profile-summary-line {
+            display: none;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-top: 8px;
+            font-style: italic;
+        }
+
+        .profile-summary-line.visible {
+            display: block;
+        }
+
+        /* ── Form Styles ────────────────────────────────── */
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .form-row-3 {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 16px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.78rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px 12px;
+            font-size: 0.9rem;
+            font-family: inherit;
+            background: var(--bg-nav);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-primary);
+            transition: border-color 0.15s;
+            box-sizing: border-box;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+        }
+
+        .form-group .hint {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        /* Radio group for work mode */
+        .work-mode-group {
+            display: flex;
+            gap: 0;
+        }
+
+        .work-mode-group label {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px 12px;
+            font-size: 0.82rem;
+            font-weight: 500;
+            text-transform: none;
+            letter-spacing: 0;
+            color: var(--text-secondary);
+            background: var(--bg-nav);
+            border: 1px solid var(--border);
+            cursor: pointer;
+            transition: all 0.15s;
+            margin-bottom: 0;
+        }
+
+        .work-mode-group label:first-child { border-radius: 6px 0 0 6px; }
+        .work-mode-group label:last-child { border-radius: 0 6px 6px 0; }
+        .work-mode-group label:not(:first-child) { border-left: none; }
+
+        .work-mode-group input[type="radio"] { display: none; }
+
+        .work-mode-group input[type="radio"]:checked + label {
+            background: var(--accent-primary);
+            color: #0f1117;
+            border-color: var(--accent-primary);
+            font-weight: 600;
+        }
+
+        /* Tag input */
+        .tag-input-wrap {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            padding: 8px 10px;
+            min-height: 42px;
+            background: var(--bg-nav);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            cursor: text;
+            transition: border-color 0.15s;
+        }
+
+        .tag-input-wrap:focus-within {
+            border-color: var(--accent-primary);
+        }
+
+        .tag-input-wrap .tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 10px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            border-radius: 20px;
+            background: rgba(34, 211, 238, 0.12);
+            color: #22d3ee;
+        }
+
+        .tag-input-wrap .tag .tag-remove {
+            cursor: pointer;
+            opacity: 0.6;
+            font-size: 0.9rem;
+            line-height: 1;
+        }
+
+        .tag-input-wrap .tag .tag-remove:hover {
+            opacity: 1;
+        }
+
+        .tag-input-wrap input {
+            border: none;
+            background: transparent;
+            color: var(--text-primary);
+            font-size: 0.85rem;
+            font-family: inherit;
+            outline: none;
+            flex: 1;
+            min-width: 100px;
+            padding: 2px 0;
+        }
+
+        .tag-input-wrap.dealbreaker .tag {
+            background: rgba(239, 68, 68, 0.12);
+            color: #ef4444;
+        }
+
+        .tag-input-wrap.nicetohave .tag {
+            background: rgba(74, 222, 128, 0.12);
+            color: #4ade80;
+        }
+
+        /* ── Buttons ────────────────────────────────────── */
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 18px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.15s, opacity 0.15s;
+            font-family: inherit;
+        }
+
+        .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+        .btn-primary {
+            background: var(--accent-primary);
+            color: #0f1117;
+        }
+
+        .btn-primary:hover:not(:disabled) { background: #06b6d4; }
+
+        .btn-save {
+            width: 100%;
+            padding: 14px;
+            font-size: 16px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* ── Elevator Pitch ─────────────────────────────── */
+
+        .pitch-area {
+            min-height: 80px;
+            resize: vertical;
+        }
+
+        /* ── Toast ──────────────────────────────────────── */
+
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+
+        /* ── Spinner ────────────────────────────────────── */
+
+        .spinner {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border: 2px solid var(--border);
+            border-top-color: var(--accent-primary);
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* ── Responsive ─────────────────────────────────── */
+
+        @media (max-width: 768px) {
+            .content-area { padding: 1rem; }
+            .form-row, .form-row-3 { grid-template-columns: 1fr; }
+            .profile-grid { grid-template-columns: 1fr; }
+            .profile-header { flex-direction: column; }
+            .profile-meta { flex-direction: column; gap: 4px; }
+            .work-mode-group { flex-wrap: wrap; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ── Topbar ──────────────────────────────────────────── -->
+<header class="topbar">
+    <h1>Job<span>Hunter</span>3000</h1>
+</header>
+
+<!-- ── Navigation ──────────────────────────────────────── -->
+{% set active = 'profile' %}
+{% include 'nav.html' %}
+
+<!-- ── Content ─────────────────────────────────────────── -->
+<main class="content-area">
+
+    <div class="page-header">
+        <h1>Candidate Dossier</h1>
+        <p>Your profile powers everything — job scoring, resume tailoring, and smart matching.</p>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════
+         AI-Generated Profile (from resume analysis)
+         ════════════════════════════════════════════════════ -->
+    {% if profile %}
+    <div class="profile-card">
+        <div class="profile-toggle" onclick="toggleProfile()">
+            <div>
+                <h2 class="profile-name">{{ profile.name or 'Candidate Profile' }}</h2>
+                <p class="profile-headline">{{ profile.headline or '' }}</p>
+            </div>
+            <div style="display: flex; align-items: center; gap: 16px;">
+                <div class="profile-meta" style="margin-bottom: 0;">
+                    {% if profile.experience_years %}
+                    <div class="profile-meta-item"><strong>{{ profile.experience_years }}+</strong> years</div>
+                    {% endif %}
+                    {% if profile.experience_level %}
+                    <div class="profile-meta-item"><strong>{{ profile.experience_level | title }}</strong></div>
+                    {% endif %}
+                </div>
+                <span class="toggle-icon" id="profileToggleIcon">&#9660;</span>
+            </div>
+        </div>
+
+        <div class="profile-summary-line" id="profileSummaryLine">
+            {{ profile.narrative[:120] }}{% if profile.narrative|length > 120 %}...{% endif %}
+        </div>
+
+        <div class="profile-body" id="profileBody">
+            {% if profile.narrative %}
+            <div class="profile-narrative" style="margin-top: 16px;">{{ profile.narrative }}</div>
+            {% endif %}
+
+            <div class="profile-grid">
+                {% if profile.core_strengths %}
+                <div class="profile-section">
+                    <div class="profile-section-label">Core Strengths</div>
+                    <div class="pills">
+                        {% for s in profile.core_strengths %}
+                        <span class="pill pill-green">{{ s }}</span>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if profile.target_roles %}
+                <div class="profile-section">
+                    <div class="profile-section-label">Target Roles (AI-detected)</div>
+                    <div class="pills">
+                        {% for r in profile.target_roles %}
+                        <span class="pill pill-cyan">{{ r }}</span>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if profile.industries %}
+                <div class="profile-section">
+                    <div class="profile-section-label">Industries</div>
+                    <div class="pills">
+                        {% for i in profile.industries %}
+                        <span class="pill pill-muted">{{ i }}</span>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if profile.all_skills %}
+                <div class="profile-section">
+                    <div class="profile-section-label">Skills</div>
+                    <div class="pills">
+                        {% for s in profile.all_skills %}
+                        <span class="pill pill-muted">{{ s }}</span>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if profile.work_history %}
+                <div class="profile-section" style="grid-column: 1 / -1;">
+                    <div class="profile-section-label">Work History</div>
+                    {% for job in profile.work_history %}
+                    <div class="work-history-item">
+                        <span class="work-title">{{ job.title }}</span>
+                        <span class="work-company">@ {{ job.company }}</span>
+                        <span class="work-duration">({{ job.duration }})</span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                {% if profile.gaps %}
+                <div class="profile-section">
+                    <div class="profile-section-label">Gaps to Address</div>
+                    <div class="pills">
+                        {% for g in profile.gaps %}
+                        <span class="pill pill-red">{{ g }}</span>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if profile.education %}
+                <div class="profile-section">
+                    <div class="profile-section-label">Education</div>
+                    <div class="pills">
+                        {% for e in profile.education %}
+                        <span class="pill pill-muted">{{ e }}</span>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if profile.unique_value %}
+                <div class="profile-unique">{{ profile.unique_value }}</div>
+                {% endif %}
+            </div>
+
+            <div style="margin-top: 16px; font-size: 0.75rem; color: var(--text-muted);">
+                Generated from resume analysis. <a href="/resumes" style="color: var(--accent-primary);">Re-analyze in Arsenal</a> to update.
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="section-card">
+        <div class="no-profile-msg">
+            <p style="font-size: 1.5rem; opacity: 0.3;">&#128203;</p>
+            <p><strong>No AI profile yet.</strong></p>
+            <p>Upload resumes in <a href="/resumes">Arsenal</a> and run "Analyze All" to generate your candidate profile.</p>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ════════════════════════════════════════════════════
+         Search Preferences (user-editable)
+         ════════════════════════════════════════════════════ -->
+    <form method="POST" action="/profile" id="profileForm">
+
+        <div class="section-card">
+            <h2>Search Preferences</h2>
+            <p class="section-desc">Where you want to work, what you want to earn, and how the scraper should hunt for you.</p>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="candidate_name">Your Name</label>
+                    <input type="text" id="candidate_name" name="candidate_name"
+                           value="{{ settings.candidate_name }}"
+                           placeholder="John Burks">
+                </div>
+                <div class="form-group">
+                    <label for="candidate_location">Location</label>
+                    <input type="text" id="candidate_location" name="candidate_location"
+                           value="{{ settings.candidate_location }}"
+                           placeholder="Oklahoma City, OK">
+                </div>
+            </div>
+
+            <div class="form-row-3">
+                <div class="form-group">
+                    <label for="candidate_radius_miles">Search Radius (miles)</label>
+                    <input type="number" id="candidate_radius_miles" name="candidate_radius_miles"
+                           value="{{ settings.candidate_radius_miles }}"
+                           min="5" max="200" step="5">
+                </div>
+                <div class="form-group">
+                    <label for="candidate_salary_min">Salary Min ($)</label>
+                    <input type="number" id="candidate_salary_min" name="candidate_salary_min"
+                           value="{{ settings.candidate_salary_min }}"
+                           min="0" step="1000">
+                </div>
+                <div class="form-group">
+                    <label for="candidate_salary_max">Salary Max ($)</label>
+                    <input type="number" id="candidate_salary_max" name="candidate_salary_max"
+                           value="{{ settings.candidate_salary_max }}"
+                           min="0" step="1000">
+                    <div class="hint">Leave at 0 for no upper limit</div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Work Mode</label>
+                <div class="work-mode-group">
+                    <input type="radio" name="candidate_work_mode" id="wm-any" value="any"
+                           {% if settings.candidate_work_mode == 'any' %}checked{% endif %}>
+                    <label for="wm-any">Any</label>
+
+                    <input type="radio" name="candidate_work_mode" id="wm-onsite" value="onsite"
+                           {% if settings.candidate_work_mode == 'onsite' %}checked{% endif %}>
+                    <label for="wm-onsite">On-site</label>
+
+                    <input type="radio" name="candidate_work_mode" id="wm-hybrid" value="hybrid"
+                           {% if settings.candidate_work_mode == 'hybrid' %}checked{% endif %}>
+                    <label for="wm-hybrid">Hybrid</label>
+
+                    <input type="radio" name="candidate_work_mode" id="wm-remote" value="remote"
+                           {% if settings.candidate_work_mode == 'remote' %}checked{% endif %}>
+                    <label for="wm-remote">Remote</label>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="candidate_willing_to_travel">Max Travel (%)</label>
+                <div class="form-row" style="margin-bottom: 0;">
+                    <input type="range" id="candidate_willing_to_travel" name="candidate_willing_to_travel"
+                           value="{{ settings.candidate_willing_to_travel }}"
+                           min="0" max="100" step="5"
+                           oninput="document.getElementById('travel-val').textContent = this.value + '%'"
+                           style="background: transparent; padding: 0;">
+                    <span id="travel-val" style="font-size: 0.9rem; color: var(--text-primary); font-weight: 600; min-width: 40px;">{{ settings.candidate_willing_to_travel }}%</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ════════════════════════════════════════════════════
+             Target Roles & Industries
+             ════════════════════════════════════════════════════ -->
+        <div class="section-card">
+            <h2>Target Roles &amp; Industries</h2>
+            <p class="section-desc">What types of roles are you looking for? The scorer uses these to rank job matches.</p>
+
+            <div class="form-group">
+                <label>Target Roles</label>
+                <div class="tag-input-wrap" id="roles-wrap" onclick="this.querySelector('input').focus()">
+                    {% for role in settings.candidate_target_roles %}
+                    <span class="tag">{{ role }}<span class="tag-remove" onclick="removeTag(this)">&times;</span></span>
+                    {% endfor %}
+                    <input type="text" placeholder="Type a role and press Enter..." onkeydown="handleTagKey(event, 'roles-wrap')">
+                </div>
+                <input type="hidden" name="candidate_target_roles" id="roles-hidden"
+                       value="{{ settings.candidate_target_roles | join('|||') }}">
+                <div class="hint">e.g. Operations Manager, Facility Manager, IT Infrastructure, Desktop Support</div>
+            </div>
+
+            <div class="form-group">
+                <label>Target Industries</label>
+                <div class="tag-input-wrap" id="industries-wrap" onclick="this.querySelector('input').focus()">
+                    {% for ind in settings.candidate_target_industries %}
+                    <span class="tag">{{ ind }}<span class="tag-remove" onclick="removeTag(this)">&times;</span></span>
+                    {% endfor %}
+                    <input type="text" placeholder="Type an industry and press Enter..." onkeydown="handleTagKey(event, 'industries-wrap')">
+                </div>
+                <input type="hidden" name="candidate_target_industries" id="industries-hidden"
+                       value="{{ settings.candidate_target_industries | join('|||') }}">
+                <div class="hint">e.g. Oil & Gas, Healthcare, Data Centers, Manufacturing</div>
+            </div>
+        </div>
+
+        <!-- ════════════════════════════════════════════════════
+             Dealbreakers & Nice-to-Haves
+             ════════════════════════════════════════════════════ -->
+        <div class="section-card">
+            <h2>Scoring Signals</h2>
+            <p class="section-desc">Dealbreakers auto-reject. Nice-to-haves boost the score.</p>
+
+            <div class="form-group">
+                <label>Dealbreakers (auto-reject if present)</label>
+                <div class="tag-input-wrap dealbreaker" id="dealbreakers-wrap" onclick="this.querySelector('input').focus()">
+                    {% for db in settings.candidate_dealbreakers %}
+                    <span class="tag">{{ db }}<span class="tag-remove" onclick="removeTag(this)">&times;</span></span>
+                    {% endfor %}
+                    <input type="text" placeholder="Type and press Enter..." onkeydown="handleTagKey(event, 'dealbreakers-wrap')">
+                </div>
+                <input type="hidden" name="candidate_dealbreakers" id="dealbreakers-hidden"
+                       value="{{ settings.candidate_dealbreakers | join('|||') }}">
+                <div class="hint">e.g. security clearance required, CDL required, commission only</div>
+            </div>
+
+            <div class="form-group">
+                <label>Nice-to-Haves (boost score if present)</label>
+                <div class="tag-input-wrap nicetohave" id="nicetohaves-wrap" onclick="this.querySelector('input').focus()">
+                    {% for nth in settings.candidate_nice_to_haves %}
+                    <span class="tag">{{ nth }}<span class="tag-remove" onclick="removeTag(this)">&times;</span></span>
+                    {% endfor %}
+                    <input type="text" placeholder="Type and press Enter..." onkeydown="handleTagKey(event, 'nicetohaves-wrap')">
+                </div>
+                <input type="hidden" name="candidate_nice_to_haves" id="nicetohaves-hidden"
+                       value="{{ settings.candidate_nice_to_haves | join('|||') }}">
+                <div class="hint">e.g. Proxmox, Linux, Docker, work from home, growth opportunity</div>
+            </div>
+        </div>
+
+        <!-- ════════════════════════════════════════════════════
+             Elevator Pitch
+             ════════════════════════════════════════════════════ -->
+        <div class="section-card">
+            <h2>Elevator Pitch</h2>
+            <p class="section-desc">A short pitch about yourself. Used in cover letter generation and outreach.</p>
+
+            <div class="form-group">
+                <textarea class="pitch-area" id="candidate_elevator_pitch" name="candidate_elevator_pitch"
+                          rows="4"
+                          placeholder="20-year operations veteran transitioning into IT infrastructure management. I bring a unique combination of facility management, technical infrastructure, and small business success...">{{ settings.candidate_elevator_pitch }}</textarea>
+            </div>
+        </div>
+
+        <!-- ════════════════════════════════════════════════════
+             Save
+             ════════════════════════════════════════════════════ -->
+        <button type="submit" class="btn btn-primary btn-save" id="saveBtn">Save Dossier</button>
+
+    </form>
+
+</main>
+
+<!-- ── Toast Container ────────────────────────────────── -->
+<div class="toast-container" id="toast-container"></div>
+
+<!-- ── Chat Widget ────────────────────────────────────── -->
+{% include 'chat_widget.html' ignore missing %}
+
+<!-- ══════════════════════════════════════════════════════
+     JavaScript
+     ══════════════════════════════════════════════════════ -->
+<script>
+    // ── Profile collapse/expand ─────────────────────────
+    function toggleProfile() {
+        const body = document.getElementById('profileBody');
+        const icon = document.getElementById('profileToggleIcon');
+        const summary = document.getElementById('profileSummaryLine');
+        const isCollapsed = body.classList.toggle('collapsed');
+        icon.classList.toggle('collapsed', isCollapsed);
+        summary.classList.toggle('visible', isCollapsed);
+        localStorage.setItem('jh3k-profile-collapsed', isCollapsed ? '1' : '0');
+    }
+
+    // Restore collapse state on load
+    (function() {
+        const saved = localStorage.getItem('jh3k-profile-collapsed');
+        if (saved === '1') {
+            const body = document.getElementById('profileBody');
+            const icon = document.getElementById('profileToggleIcon');
+            const summary = document.getElementById('profileSummaryLine');
+            if (body) { body.classList.add('collapsed'); }
+            if (icon) { icon.classList.add('collapsed'); }
+            if (summary) { summary.classList.add('visible'); }
+        }
+    })();
+
+    // ── Tag input handling ───────────────────────────────
+    function handleTagKey(e, wrapId) {
+        if (e.key === 'Enter' || e.key === ',') {
+            e.preventDefault();
+            const input = e.target;
+            const val = input.value.trim().replace(/,$/,'').trim();
+            if (!val) return;
+
+            const wrap = document.getElementById(wrapId);
+            const tag = document.createElement('span');
+            tag.className = 'tag';
+            tag.innerHTML = escapeHtml(val) + '<span class="tag-remove" onclick="removeTag(this)">&times;</span>';
+            wrap.insertBefore(tag, input);
+            input.value = '';
+            syncHiddenFields();
+        }
+    }
+
+    function removeTag(el) {
+        el.parentElement.remove();
+        syncHiddenFields();
+    }
+
+    function syncHiddenFields() {
+        syncTagField('roles-wrap', 'roles-hidden');
+        syncTagField('industries-wrap', 'industries-hidden');
+        syncTagField('dealbreakers-wrap', 'dealbreakers-hidden');
+        syncTagField('nicetohaves-wrap', 'nicetohaves-hidden');
+    }
+
+    function syncTagField(wrapId, hiddenId) {
+        const wrap = document.getElementById(wrapId);
+        const hidden = document.getElementById(hiddenId);
+        if (!wrap || !hidden) return;
+
+        const tags = wrap.querySelectorAll('.tag');
+        const values = [];
+        tags.forEach(function(t) {
+            // Get text content without the × button
+            const clone = t.cloneNode(true);
+            const removeBtn = clone.querySelector('.tag-remove');
+            if (removeBtn) removeBtn.remove();
+            values.push(clone.textContent.trim());
+        });
+        hidden.value = values.join('|||');
+    }
+
+    // Sync on form submit
+    document.getElementById('profileForm').addEventListener('submit', function() {
+        syncHiddenFields();
+    });
+
+    // ── Escape HTML ──────────────────────────────────────
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    // ── Toast helper ─────────────────────────────────────
+    function showToast(message, type) {
+        const container = document.getElementById('toast-container');
+        const toast = document.createElement('div');
+        toast.className = 'toast toast-' + (type || 'success');
+        toast.textContent = message;
+        container.appendChild(toast);
+        setTimeout(function() {
+            toast.style.animation = 'toast-out 0.3s ease forwards';
+            setTimeout(function() { toast.remove(); }, 300);
+        }, 4000);
+    }
+
+    // ── Show saved toast ─────────────────────────────────
+    {% if saved %}
+    document.addEventListener('DOMContentLoaded', function() {
+        showToast('Dossier saved successfully', 'success');
+    });
+    {% endif %}
+</script>
+
+</body>
+</html>

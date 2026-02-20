@@ -922,6 +922,45 @@ async def api_generate_cover_letter(job_id: int):
         return JSONResponse({"error": str(e)}, status_code=500)
 
 
+@app.post("/api/jobs/{job_id}/revise")
+async def api_revise_document(job_id: int, request: Request):
+    """Revise a generated resume or cover letter based on user feedback."""
+    import asyncio
+    import traceback
+    from services.generator import revise_document
+
+    body = await request.json()
+    doc_type = body.get("doc_type", "").strip()
+    instruction = body.get("instruction", "").strip()
+
+    if doc_type not in ("resume", "cover"):
+        return JSONResponse({"error": "doc_type must be 'resume' or 'cover'"}, status_code=400)
+    if not instruction:
+        return JSONResponse({"error": "instruction is required"}, status_code=400)
+
+    conn = get_db()
+    job = get_job(conn, job_id)
+    conn.close()
+    if not job:
+        return JSONResponse({"error": "Job not found"}, status_code=404)
+
+    settings = load_settings()
+
+    def _revise():
+        return revise_document(job, doc_type, instruction, settings)
+
+    try:
+        loop = asyncio.get_event_loop()
+        result = await loop.run_in_executor(None, _revise)
+
+        if result.get("error"):
+            return JSONResponse(result, status_code=400)
+        return JSONResponse(result)
+    except Exception as e:
+        traceback.print_exc()
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
 @app.get("/api/jobs/{job_id}/download/{doc_type}")
 async def api_download_doc(job_id: int, doc_type: str, format: str = "docx"):
     """Download a generated resume or cover letter in docx/pdf/md format."""

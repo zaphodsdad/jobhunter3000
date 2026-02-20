@@ -682,6 +682,67 @@
       font-family: inherit;
     }
 
+    /* ── Revision Input ─────────────────────────────────── */
+    .revision-bar {
+      display: flex;
+      gap: 8px;
+      align-items: flex-end;
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid #1a1f2e;
+    }
+
+    .revision-bar textarea {
+      flex: 1;
+      background: #111318;
+      color: #e2e8f0;
+      border: 1px solid #2a2f3e;
+      border-radius: 6px;
+      padding: 0.5rem 0.75rem;
+      font-size: 0.82rem;
+      font-family: inherit;
+      resize: none;
+      min-height: 2.2rem;
+      max-height: 5rem;
+      outline: none;
+      transition: border-color 0.2s;
+      box-sizing: border-box;
+    }
+
+    .revision-bar textarea:focus {
+      border-color: #00e5ff;
+    }
+
+    .revision-bar textarea::placeholder {
+      color: #4b5563;
+    }
+
+    .btn-revise {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 0.5rem 1rem;
+      font-size: 0.82rem;
+      font-weight: 600;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s;
+      background: rgba(245, 158, 11, 0.1);
+      color: #fbbf24;
+      border: 1px solid rgba(245, 158, 11, 0.3);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .btn-revise:hover {
+      background: rgba(245, 158, 11, 0.2);
+    }
+
+    .btn-revise:disabled {
+      opacity: 0.5;
+      cursor: wait;
+    }
+
     /* ── Fit Summary ───────────────────────────────────── */
     .fit-summary {
       font-size: 0.9rem;
@@ -921,6 +982,11 @@
                 Download Resume
               </button>
             </div>
+            <div class="revision-bar">
+              <textarea id="resumeRevision" placeholder="e.g. &quot;Tone down HIWC — it's just me and my wife, not a big operation&quot;" rows="1"
+                onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();reviseDoc('resume');}"></textarea>
+              <button class="btn-revise" id="btnReviseResume" onclick="reviseDoc('resume')">Revise</button>
+            </div>
           </div>
 
           <!-- Cover letter output -->
@@ -940,6 +1006,11 @@
               <button class="btn-download" onclick="downloadDoc('cover', document.getElementById('coverFormat').value)">
                 Download Cover Letter
               </button>
+            </div>
+            <div class="revision-bar">
+              <textarea id="coverRevision" placeholder="e.g. &quot;Make the opening paragraph more specific to this company&quot;" rows="1"
+                onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();reviseDoc('cover');}"></textarea>
+              <button class="btn-revise" id="btnReviseCover" onclick="reviseDoc('cover')">Revise</button>
             </div>
           </div>
 
@@ -1535,6 +1606,58 @@
           btn.style.color = '';
         }, 1500);
       });
+    }
+
+    /* ── Revise Document ────────────────────────────────── */
+    var reviseSteps = [
+      'Reading your feedback...',
+      'Analyzing current document...',
+      'Applying your changes...',
+      'Rewriting sections...',
+      'Formatting revised document...',
+    ];
+
+    async function reviseDoc(docType) {
+      if (!currentJobId) return;
+
+      var inputId = docType === 'resume' ? 'resumeRevision' : 'coverRevision';
+      var btnId = docType === 'resume' ? 'btnReviseResume' : 'btnReviseCover';
+      var contentId = docType === 'resume' ? 'resumeContent' : 'coverContent';
+      var instruction = document.getElementById(inputId).value.trim();
+
+      if (!instruction) {
+        document.getElementById(inputId).focus();
+        document.getElementById(inputId).style.borderColor = '#f87171';
+        setTimeout(function() { document.getElementById(inputId).style.borderColor = ''; }, 2000);
+        return;
+      }
+
+      var btn = document.getElementById(btnId);
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span> Revising...';
+      startGenStatus(reviseSteps);
+
+      try {
+        var resp = await fetch('/api/jobs/' + currentJobId + '/revise', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ doc_type: docType, instruction: instruction })
+        });
+        var data = await parseResponse(resp);
+
+        document.getElementById(contentId).textContent = data.markdown;
+        btn.innerHTML = 'Revise';
+        btn.disabled = false;
+        document.getElementById(inputId).value = '';
+        stopGenStatus('Revision complete — downloading updated .docx');
+        triggerDownload(docType, 'docx');
+
+        if (window.refreshTopbarCredits) refreshTopbarCredits();
+      } catch (err) {
+        stopGenStatus('Revision error: ' + err.message, true);
+        btn.innerHTML = 'Revise';
+        btn.disabled = false;
+      }
     }
   </script>
 

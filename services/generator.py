@@ -498,3 +498,85 @@ Output only the cover letter. No commentary before or after."""
         "markdown": result,
         "path": base_path,
     }
+
+
+def revise_document(job: dict, doc_type: str, instruction: str,
+                    settings: dict = None) -> dict:
+    """Revise a previously generated resume or cover letter based on user feedback.
+
+    doc_type: "resume" or "cover"
+    instruction: user's revision note (e.g. "tone down the HIWC section")
+    Returns {ok, markdown, path} or {error}.
+    """
+    if not settings:
+        settings = load_settings()
+
+    if doc_type not in ("resume", "cover"):
+        return {"error": "Invalid doc_type. Use 'resume' or 'cover'."}
+
+    # Find the current markdown on disk
+    field = "resume_path" if doc_type == "resume" else "cover_letter_path"
+    base_path = job.get(field, "")
+    if not base_path:
+        return {"error": f"No {doc_type} generated yet. Generate one first."}
+
+    if base_path.endswith((".docx", ".pdf", ".md")):
+        base_path = os.path.splitext(base_path)[0]
+
+    md_path = f"{base_path}.md"
+    if not os.path.exists(md_path):
+        return {"error": f"Source file not found at {md_path}. Try regenerating."}
+
+    with open(md_path) as f:
+        current_doc = f.read()
+
+    # Build the job context for the LLM
+    job_info = (
+        f"Title: {job.get('title', 'Unknown')}\n"
+        f"Company: {job.get('company', 'Unknown')}\n"
+        f"Location: {job.get('location', 'Unknown')}\n"
+    )
+
+    doc_label = "resume" if doc_type == "resume" else "cover letter"
+
+    prompt = f"""You are an expert {doc_label} editor. The user has a {doc_label} that was previously generated for a specific job posting. They want you to revise it based on their feedback.
+
+TARGET JOB:
+{job_info}
+
+CURRENT {doc_label.upper()}:
+{current_doc}
+
+USER'S REVISION REQUEST:
+{instruction}
+
+INSTRUCTIONS:
+- Apply the user's requested changes to the {doc_label}
+- Keep all other content and formatting intact unless the change requires restructuring
+- Maintain the same markdown formatting style
+- Do NOT fabricate new experience or skills — only adjust what's already there
+- Do NOT add commentary before or after — output ONLY the revised {doc_label}"""
+
+    result = llm_chat(
+        [{"role": "user", "content": prompt}],
+        settings,
+    )
+
+    # Overwrite the markdown file
+    with open(md_path, "w") as f:
+        f.write(result)
+
+    # Regenerate DOCX and PDF from the revised markdown
+    docx_path = f"{base_path}.docx"
+    pdf_path = f"{base_path}.pdf"
+    _md_to_docx(result, docx_path, doc_type=doc_type)
+    try:
+        _md_to_pdf(result, pdf_path)
+    except Exception:
+        pass  # PDF is optional
+
+    return {
+        "ok": True,
+        "markdown": result,
+        "path": base_path,
+    }

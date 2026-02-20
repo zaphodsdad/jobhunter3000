@@ -101,6 +101,53 @@ async def jobs_page(request: Request,
     })
 
 
+@app.get("/jobs/{job_id}", response_class=HTMLResponse)
+async def job_detail_page(request: Request, job_id: int):
+    conn = get_db()
+    job = get_job(conn, job_id)
+    conn.close()
+    if not job:
+        return RedirectResponse(url="/jobs", status_code=302)
+
+    # Parse JSON fields
+    pros = []
+    cons = []
+    for field, target in [("pros", pros), ("cons", cons)]:
+        val = job.get(field)
+        if isinstance(val, str):
+            try:
+                target.extend(json.loads(val))
+            except (json.JSONDecodeError, TypeError):
+                pass
+        elif isinstance(val, list):
+            target.extend(val)
+
+    # Load generated markdown content if files exist
+    resume_markdown = None
+    cover_markdown = None
+    for field, var_name in [("resume_path", "resume"), ("cover_letter_path", "cover")]:
+        base_path = job.get(field)
+        if base_path:
+            if base_path.endswith((".docx", ".pdf", ".md")):
+                base_path = os.path.splitext(base_path)[0]
+            md_path = f"{base_path}.md"
+            if os.path.exists(md_path):
+                with open(md_path) as f:
+                    if var_name == "resume":
+                        resume_markdown = f.read()
+                    else:
+                        cover_markdown = f.read()
+
+    return templates.TemplateResponse("job_detail.html", {
+        "request": request,
+        "job": job,
+        "pros": pros,
+        "cons": cons,
+        "resume_markdown": resume_markdown,
+        "cover_markdown": cover_markdown,
+    })
+
+
 @app.get("/pipeline", response_class=HTMLResponse)
 async def pipeline_page(request: Request):
     conn = get_db()

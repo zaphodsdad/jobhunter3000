@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ job.title }} — JobHunter3000</title>
+  <style>
+  {% include 'base_styles.html' %}
+
+    /* ── Back Link ─────────────────────────────────────── */
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.85rem;
+      color: #6b7280;
+      text-decoration: none;
+      margin-bottom: 1.25rem;
+      transition: color 0.15s;
+    }
+
+    .back-link:hover {
+      color: #00e5ff;
+      text-decoration: none;
+    }
+
+    /* ── Job Header ────────────────────────────────────── */
+    .job-header {
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      margin-bottom: 1.5rem;
+    }
+
+    .job-header-score {
+      flex-shrink: 0;
+    }
+
+    .job-header-score .score-badge {
+      font-size: 1.5rem;
+      padding: 0.4rem 1rem;
+      min-width: 3.5rem;
+    }
+
+    .job-header-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .job-header-title {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: #e2e8f0;
+      margin: 0 0 6px 0;
+      line-height: 1.3;
+    }
+
+    .job-header-meta {
+      font-size: 0.9rem;
+      color: #6b7280;
+    }
+
+    .job-header-meta a {
+      color: #00e5ff;
+      text-decoration: none;
+    }
+
+    .job-header-meta a:hover {
+      text-decoration: underline;
+    }
+
+    /* ── Actions Bar ───────────────────────────────────── */
+    .actions-bar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 1rem;
+      background: #0c0e14;
+      border: 1px solid #1a1f2e;
+      border-radius: 8px;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    .actions-bar label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #6b7280;
+    }
+
+    .actions-bar .status-select {
+      background: #111318;
+      color: #e2e8f0;
+      border: 1px solid #2a2f3e;
+      border-radius: 6px;
+      padding: 0.35rem 0.5rem;
+      font-size: 0.85rem;
+      cursor: pointer;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .actions-bar .status-select:hover,
+    .actions-bar .status-select:focus {
+      border-color: #00e5ff;
+    }
+
+    .actions-bar .source-link {
+      margin-left: auto;
+    }
+
+    .actions-bar .source-link a {
+      color: #00e5ff;
+      text-decoration: none;
+      font-size: 0.85rem;
+    }
+
+    .actions-bar .source-link a:hover {
+      text-decoration: underline;
+    }
+
+    /* ── Two-Column Layout ─────────────────────────────── */
+    .detail-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.25rem;
+      margin-bottom: 1.5rem;
+    }
+
+    @media (max-width: 768px) {
+      .detail-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* ── Sections ──────────────────────────────────────── */
+    .detail-section {
+      margin-bottom: 1.5rem;
+    }
+
+    .detail-section h3 {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #6b7280;
+      margin: 0 0 0.5rem 0;
+    }
+
+    .detail-section p,
+    .detail-section ul {
+      margin: 0;
+      font-size: 0.9rem;
+      color: #cbd5e1;
+      line-height: 1.6;
+    }
+
+    .detail-section ul {
+      padding-left: 1.2rem;
+    }
+
+    .detail-section ul li {
+      margin-bottom: 0.3rem;
+    }
+
+    .pro-item { color: #34d399; }
+    .con-item { color: #f87171; }
+
+    /* ── Fit Summary ───────────────────────────────────── */
+    .fit-summary {
+      font-size: 0.95rem;
+      color: #e2e8f0;
+      font-style: italic;
+      padding: 0.75rem 1rem;
+      background: rgba(0, 229, 255, 0.04);
+      border-left: 3px solid #00e5ff;
+      border-radius: 0 6px 6px 0;
+      line-height: 1.6;
+    }
+
+    /* ── Description ───────────────────────────────────── */
+    .job-description {
+      max-height: 400px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      font-size: 0.85rem;
+      color: #94a3b8;
+      padding: 1rem;
+      background: #111318;
+      border-radius: 8px;
+      border: 1px solid #1a1f2e;
+      line-height: 1.6;
+    }
+
+    /* ── Generation Buttons ────────────────────────────── */
+    .gen-tools {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .btn-gen {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 0.55rem 1.2rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s;
+      border: 1px solid;
+    }
+
+    .btn-gen-resume {
+      background: rgba(16, 185, 129, 0.1);
+      color: #34d399;
+      border-color: rgba(16, 185, 129, 0.3);
+    }
+    .btn-gen-resume:hover { background: rgba(16, 185, 129, 0.2); }
+
+    .btn-gen-cover {
+      background: rgba(168, 85, 247, 0.1);
+      color: #c084fc;
+      border-color: rgba(168, 85, 247, 0.3);
+    }
+    .btn-gen-cover:hover { background: rgba(168, 85, 247, 0.2); }
+
+    .btn-gen-both {
+      background: rgba(0, 229, 255, 0.1);
+      color: #00e5ff;
+      border-color: rgba(0, 229, 255, 0.3);
+    }
+    .btn-gen-both:hover { background: rgba(0, 229, 255, 0.2); }
+
+    .btn-gen:disabled { opacity: 0.5; cursor: wait; }
+
+    .btn-gen .spinner {
+      width: 14px;
+      height: 14px;
+      border: 2px solid transparent;
+      border-top-color: currentColor;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .gen-status {
+      font-size: 0.82rem;
+      color: #6b7280;
+      margin-top: 10px;
+      min-height: 1.2em;
+      transition: opacity 0.3s;
+    }
+
+    .gen-status.active { color: #00e5ff; }
+
+    /* ── Apply Now Button ─────────────────────────────── */
+    .apply-section {
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 1px solid #2a2f3e;
+    }
+
+    .btn-apply {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0.65rem 1.5rem;
+      font-size: 0.95rem;
+      font-weight: 700;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.15s;
+      text-decoration: none;
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.4);
+    }
+    .btn-apply:hover { background: rgba(16, 185, 129, 0.25); color: #4ade80; text-decoration: none; }
+
+    /* ── Generated Output ──────────────────────────────── */
+    .gen-output {
+      display: none;
+      margin-top: 16px;
+    }
+
+    .gen-output.visible { display: block; }
+
+    .gen-output-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .gen-output-header h4 {
+      margin: 0;
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #6b7280;
+    }
+
+    .btn-copy {
+      background: rgba(0, 229, 255, 0.1);
+      color: #00e5ff;
+      border: 1px solid rgba(0, 229, 255, 0.25);
+      border-radius: 4px;
+      padding: 0.2rem 0.6rem;
+      font-size: 0.72rem;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .btn-copy:hover { background: rgba(0, 229, 255, 0.2); }
+
+    .gen-content {
+      max-height: 600px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      font-size: 0.85rem;
+      color: #cbd5e1;
+      padding: 1rem;
+      background: #111318;
+      border-radius: 8px;
+      border: 1px solid #1a1f2e;
+      line-height: 1.6;
+      font-family: inherit;
+    }
+
+    /* ── Download Bar ──────────────────────────────────── */
+    .gen-download-bar {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid #1a1f2e;
+    }
+
+    .format-select {
+      background: #111318;
+      color: #e2e8f0;
+      border: 1px solid #2a2f3e;
+      border-radius: 6px;
+      padding: 0.45rem 0.6rem;
+      font-size: 0.82rem;
+      cursor: pointer;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .format-select:hover, .format-select:focus { border-color: #00e5ff; }
+
+    .btn-download {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 0.45rem 1.2rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s;
+      background: rgba(0, 229, 255, 0.12);
+      color: #00e5ff;
+      border: 1px solid rgba(0, 229, 255, 0.3);
+    }
+    .btn-download:hover { background: rgba(0, 229, 255, 0.22); }
+
+    /* ── Revision Input ────────────────────────────────── */
+    .revision-bar {
+      display: flex;
+      gap: 8px;
+      align-items: flex-end;
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid #1a1f2e;
+    }
+
+    .revision-bar textarea {
+      flex: 1;
+      background: #111318;
+      color: #e2e8f0;
+      border: 1px solid #2a2f3e;
+      border-radius: 6px;
+      padding: 0.5rem 0.75rem;
+      font-size: 0.85rem;
+      font-family: inherit;
+      resize: none;
+      min-height: 2.2rem;
+      max-height: 5rem;
+      outline: none;
+      transition: border-color 0.2s;
+      box-sizing: border-box;
+    }
+    .revision-bar textarea:focus { border-color: #00e5ff; }
+    .revision-bar textarea::placeholder { color: #4b5563; }
+
+    .btn-revise {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 0.5rem 1rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s;
+      background: rgba(245, 158, 11, 0.1);
+      color: #fbbf24;
+      border: 1px solid rgba(245, 158, 11, 0.3);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .btn-revise:hover { background: rgba(245, 158, 11, 0.2); }
+    .btn-revise:disabled { opacity: 0.5; cursor: wait; }
+
+    /* ── Notes ──────────────────────────────────────────── */
+    .notes-section textarea {
+      width: 100%;
+      background: #111318;
+      color: #e2e8f0;
+      border: 1px solid #2a2f3e;
+      border-radius: 6px;
+      padding: 0.6rem 0.75rem;
+      font-size: 0.85rem;
+      resize: vertical;
+      min-height: 3rem;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.2s;
+      box-sizing: border-box;
+    }
+    .notes-section textarea:focus { border-color: #00e5ff; }
+
+    .notes-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+      align-items: center;
+    }
+
+    .notes-row button {
+      background: rgba(0, 229, 255, 0.1);
+      color: #00e5ff;
+      border: 1px solid rgba(0, 229, 255, 0.25);
+      border-radius: 6px;
+      padding: 0.4rem 0.85rem;
+      font-size: 0.82rem;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.2s;
+    }
+    .notes-row button:hover { background: rgba(0, 229, 255, 0.2); }
+
+    .notes-saved {
+      font-size: 0.82rem;
+      color: #34d399;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    .notes-saved.visible { opacity: 1; }
+  </style>
+</head>
+<body>
+
+  <!-- ── Topbar ──────────────────────────────────────── -->
+  <header class="topbar">
+    <div class="topbar-brand">Job<span>Hunter</span>3000</div>
+    <div class="topbar-right">Job Detail</div>
+  </header>
+
+  <!-- ── Navigation ──────────────────────────────────── -->
+  {% set active = 'jobs' %}
+  {% include 'nav.html' %}
+
+  <!-- ── Content ─────────────────────────────────────── -->
+  <main class="content">
+
+    <a href="/jobs" class="back-link">&larr; Back to Intel</a>
+
+    <!-- Header -->
+    <div class="job-header">
+      <div class="job-header-score">
+        {% if job.score is not none %}
+        <span class="score-badge {% if job.score >= 80 %}score-high{% elif job.score >= 60 %}score-good{% elif job.score >= 40 %}score-mid{% else %}score-low{% endif %}">
+          {{ job.score }}
+        </span>
+        {% else %}
+        <span class="score-badge score-low">&mdash;</span>
+        {% endif %}
+      </div>
+      <div class="job-header-info">
+        <h1 class="job-header-title">{{ job.title }}</h1>
+        <div class="job-header-meta">
+          {{ job.company or 'Unknown' }}
+          {% if job.location %} &middot; {{ job.location }}{% endif %}
+          {% if job.salary_text %} &middot; {{ job.salary_text }}{% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Actions Bar -->
+    <div class="actions-bar">
+      <label>Status</label>
+      <select class="status-select" id="statusSelect" onchange="changeStatus()">
+        {% for s in ['new', 'interested', 'applied', 'interviewing', 'offer', 'accepted', 'rejected', 'archived'] %}
+        <option value="{{ s }}" {% if (job.status or 'new') == s %}selected{% endif %}>{{ s | capitalize }}</option>
+        {% endfor %}
+      </select>
+      {% if job.url and not job.url.startswith('import://') %}
+      <div class="source-link">
+        <a href="{{ job.url }}" target="_blank" rel="noopener">View on {{ (job.source or 'Source') | capitalize }} &rarr;</a>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Fit Summary -->
+    {% if job.fit_summary %}
+    <div class="detail-section">
+      <div class="fit-summary">{{ job.fit_summary }}</div>
+    </div>
+    {% endif %}
+
+    <!-- Pros / Cons -->
+    {% if pros or cons %}
+    <div class="detail-grid">
+      <div class="detail-section">
+        <h3>Pros</h3>
+        <ul>
+          {% for p in pros %}
+          <li class="pro-item">{{ p }}</li>
+          {% endfor %}
+          {% if not pros %}<li style="color:#6b7280">None</li>{% endif %}
+        </ul>
+      </div>
+      <div class="detail-section">
+        <h3>Cons</h3>
+        <ul>
+          {% for c in cons %}
+          <li class="con-item">{{ c }}</li>
+          {% endfor %}
+          {% if not cons %}<li style="color:#6b7280">None</li>{% endif %}
+        </ul>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Description -->
+    {% if job.description %}
+    <div class="detail-section">
+      <h3>Job Description</h3>
+      <div class="job-description">{{ job.description }}</div>
+    </div>
+    {% endif %}
+
+    <!-- ═══════════════════════════════════════════════════
+         APPLICATION TOOLS
+         ═══════════════════════════════════════════════════ -->
+    <div class="detail-section">
+      <h3>Application Tools</h3>
+      <div class="gen-tools">
+        <button class="btn-gen btn-gen-resume" id="btnGenResume" onclick="generateResume()">
+          {% if job.resume_path %}Regenerate Resume{% else %}Generate Resume{% endif %}
+        </button>
+        <button class="btn-gen btn-gen-cover" id="btnGenCover" onclick="generateCoverLetter()">
+          {% if job.cover_letter_path %}Regenerate Cover Letter{% else %}Generate Cover Letter{% endif %}
+        </button>
+        <button class="btn-gen btn-gen-both" id="btnGenBoth" onclick="generateBoth()">
+          {% if job.resume_path and job.cover_letter_path %}Regenerate Both{% else %}Generate Both{% endif %}
+        </button>
+      </div>
+      <div class="gen-status" id="genStatus"></div>
+
+      <!-- Resume output -->
+      <div class="gen-output {% if resume_markdown %}visible{% endif %}" id="resumeOutput">
+        <div class="gen-output-header">
+          <h4>Generated Resume</h4>
+          <button class="btn-copy" onclick="copyText('resumeContent', this)">Copy text</button>
+        </div>
+        <div class="gen-content" id="resumeContent">{% if resume_markdown %}{{ resume_markdown }}{% elif job.resume_path %}(Previously generated — download available){% endif %}</div>
+        <div class="gen-download-bar">
+          <select class="format-select" id="resumeFormat">
+            <option value="docx">.docx (Word)</option>
+            <option value="pdf">.pdf</option>
+            <option value="txt">.txt (Plain Text)</option>
+            <option value="md">.md (Markdown)</option>
+          </select>
+          <button class="btn-download" onclick="downloadDoc('resume', document.getElementById('resumeFormat').value)">
+            Download Resume
+          </button>
+        </div>
+        <div class="revision-bar">
+          <textarea id="resumeRevision" placeholder='e.g. "Tone down HIWC section — it&#39;s just me and my wife, not a big operation"' rows="1"
+            onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();reviseDoc('resume');}"></textarea>
+          <button class="btn-revise" id="btnReviseResume" onclick="reviseDoc('resume')">Revise</button>
+        </div>
+      </div>
+
+      <!-- Cover letter output -->
+      <div class="gen-output {% if cover_markdown %}visible{% endif %}" id="coverOutput">
+        <div class="gen-output-header">
+          <h4>Generated Cover Letter</h4>
+          <button class="btn-copy" onclick="copyText('coverContent', this)">Copy text</button>
+        </div>
+        <div class="gen-content" id="coverContent">{% if cover_markdown %}{{ cover_markdown }}{% elif job.cover_letter_path %}(Previously generated — download available){% endif %}</div>
+        <div class="gen-download-bar">
+          <select class="format-select" id="coverFormat">
+            <option value="docx">.docx (Word)</option>
+            <option value="pdf">.pdf</option>
+            <option value="txt">.txt (Plain Text)</option>
+            <option value="md">.md (Markdown)</option>
+          </select>
+          <button class="btn-download" onclick="downloadDoc('cover', document.getElementById('coverFormat').value)">
+            Download Cover Letter
+          </button>
+        </div>
+        <div class="revision-bar">
+          <textarea id="coverRevision" placeholder='e.g. "Make the opening paragraph more specific to this company"' rows="1"
+            onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();reviseDoc('cover');}"></textarea>
+          <button class="btn-revise" id="btnReviseCover" onclick="reviseDoc('cover')">Revise</button>
+        </div>
+      </div>
+
+      <!-- Apply Now -->
+      {% if job.url and not job.url.startswith('import://') and (job.resume_path or job.cover_letter_path) %}
+      <div class="apply-section" id="applySection">
+        <a class="btn-apply" id="btnApply" href="{{ job.url }}" target="_blank" rel="noopener">
+          Apply Now &rarr;
+        </a>
+      </div>
+      {% else %}
+      <div class="apply-section" id="applySection" style="display:none;">
+        <a class="btn-apply" id="btnApply" href="{{ job.url or '#' }}" target="_blank" rel="noopener">
+          Apply Now &rarr;
+        </a>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Notes -->
+    <div class="detail-section notes-section">
+      <h3>Notes</h3>
+      <textarea id="notesArea" placeholder="Add notes about this job...">{{ job.notes or '' }}</textarea>
+      <div class="notes-row">
+        <button onclick="saveNotes()">Save Notes</button>
+        <span class="notes-saved" id="notesSaved">Saved</span>
+      </div>
+    </div>
+
+    <a href="/jobs" class="back-link" style="margin-top: 1.5rem;">&larr; Back to Intel</a>
+
+  </main>
+
+  <script>
+    var JOB_ID = {{ job.id }};
+
+    /* ── Status Change ─────────────────────────────────── */
+    function changeStatus() {
+      var newStatus = document.getElementById('statusSelect').value;
+      fetch('/api/jobs/' + JOB_ID + '/status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus })
+      });
+    }
+
+    /* ── Save Notes ────────────────────────────────────── */
+    function saveNotes() {
+      var notes = document.getElementById('notesArea').value;
+      fetch('/api/jobs/' + JOB_ID + '/notes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notes: notes })
+      }).then(function(r) {
+        if (r.ok) {
+          var el = document.getElementById('notesSaved');
+          el.classList.add('visible');
+          setTimeout(function() { el.classList.remove('visible'); }, 2000);
+        }
+      });
+    }
+
+    /* ── Generation Status Messages ────────────────────── */
+    var genStatusTimer = null;
+    var resumeSteps = ['Analyzing job posting...', 'Matching your skills...', 'Identifying key qualifications...', 'Tailoring resume sections...', 'Writing experience highlights...', 'Formatting document...'];
+    var coverSteps = ['Analyzing job posting...', 'Identifying company details...', 'Matching your background...', 'Drafting opening paragraph...', 'Writing body paragraphs...', 'Polishing and formatting...'];
+    var bothSteps = ['Analyzing job posting...', 'Matching your skills...', 'Identifying key qualifications...', 'Writing tailored resume...', 'Drafting cover letter...', 'Highlighting relevant experience...', 'Polishing both documents...', 'Formatting for download...'];
+    var reviseSteps = ['Reading your feedback...', 'Analyzing current document...', 'Applying your changes...', 'Rewriting sections...', 'Formatting revised document...'];
+
+    function startGenStatus(steps) {
+      var el = document.getElementById('genStatus');
+      var idx = 0;
+      el.textContent = steps[0];
+      el.classList.add('active');
+      if (genStatusTimer) clearInterval(genStatusTimer);
+      genStatusTimer = setInterval(function() {
+        idx++;
+        if (idx < steps.length) { el.textContent = steps[idx]; }
+        if (idx >= steps.length) {
+          var dots = '.'.repeat((idx - steps.length) % 3 + 1);
+          el.textContent = steps[steps.length - 1].replace('...', dots);
+        }
+      }, 3000);
+    }
+
+    function stopGenStatus(message, isError) {
+      if (genStatusTimer) { clearInterval(genStatusTimer); genStatusTimer = null; }
+      var el = document.getElementById('genStatus');
+      el.textContent = message || '';
+      el.classList.remove('active');
+      if (message) {
+        el.style.color = isError ? '#f87171' : '#34d399';
+        setTimeout(function() { el.textContent = ''; el.style.color = ''; }, isError ? 8000 : 4000);
+      }
+    }
+
+    /* ── Parse Response ────────────────────────────────── */
+    async function parseResponse(resp) {
+      var text = await resp.text();
+      try {
+        var data = JSON.parse(text);
+        if (data.error) throw new Error(data.error);
+        return data;
+      } catch (e) {
+        if (text.includes('Internal Server Error')) throw new Error('Server error — check logs');
+        throw e;
+      }
+    }
+
+    /* ── Show Apply Button ─────────────────────────────── */
+    function showApplyButton() {
+      var sec = document.getElementById('applySection');
+      var btn = document.getElementById('btnApply');
+      if (btn.href && btn.href !== '#' && !btn.href.endsWith('#')) {
+        sec.style.display = 'block';
+      }
+    }
+
+    /* ── Generate Resume ───────────────────────────────── */
+    async function generateResume() {
+      var btn = document.getElementById('btnGenResume');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span> Generating...';
+      startGenStatus(resumeSteps);
+      try {
+        var resp = await fetch('/api/jobs/' + JOB_ID + '/generate-resume', { method: 'POST' });
+        var data = await parseResponse(resp);
+        document.getElementById('resumeContent').textContent = data.markdown;
+        document.getElementById('resumeOutput').classList.add('visible');
+        btn.innerHTML = 'Regenerate Resume';
+        btn.disabled = false;
+        showApplyButton();
+        stopGenStatus('Resume ready');
+        if (window.refreshTopbarCredits) refreshTopbarCredits();
+      } catch (err) {
+        stopGenStatus('Error: ' + err.message, true);
+        btn.innerHTML = 'Error — retry?';
+        btn.disabled = false;
+        setTimeout(function() { btn.innerHTML = 'Generate Resume'; }, 5000);
+      }
+    }
+
+    /* ── Generate Cover Letter ─────────────────────────── */
+    async function generateCoverLetter() {
+      var btn = document.getElementById('btnGenCover');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span> Generating...';
+      startGenStatus(coverSteps);
+      try {
+        var resp = await fetch('/api/jobs/' + JOB_ID + '/generate-cover-letter', { method: 'POST' });
+        var data = await parseResponse(resp);
+        document.getElementById('coverContent').textContent = data.markdown;
+        document.getElementById('coverOutput').classList.add('visible');
+        btn.innerHTML = 'Regenerate Cover Letter';
+        btn.disabled = false;
+        showApplyButton();
+        stopGenStatus('Cover letter ready');
+        if (window.refreshTopbarCredits) refreshTopbarCredits();
+      } catch (err) {
+        stopGenStatus('Error: ' + err.message, true);
+        btn.innerHTML = 'Error — retry?';
+        btn.disabled = false;
+        setTimeout(function() { btn.innerHTML = 'Generate Cover Letter'; }, 5000);
+      }
+    }
+
+    /* ── Generate Both ─────────────────────────────────── */
+    async function generateBoth() {
+      var btnBoth = document.getElementById('btnGenBoth');
+      var btnResume = document.getElementById('btnGenResume');
+      var btnCover = document.getElementById('btnGenCover');
+      btnBoth.disabled = true;
+      btnBoth.innerHTML = '<span class="spinner"></span> Generating Both...';
+      btnResume.disabled = true;
+      btnResume.innerHTML = '<span class="spinner"></span> Generating...';
+      btnCover.disabled = true;
+      btnCover.innerHTML = '<span class="spinner"></span> Generating...';
+      startGenStatus(bothSteps);
+
+      var resumeOk = false, coverOk = false;
+      try {
+        var [rr, cr] = await Promise.all([
+          fetch('/api/jobs/' + JOB_ID + '/generate-resume', { method: 'POST' }),
+          fetch('/api/jobs/' + JOB_ID + '/generate-cover-letter', { method: 'POST' })
+        ]);
+        var rd, cd;
+        try { rd = await parseResponse(rr); } catch(e) { rd = {error: e.message}; }
+        try { cd = await parseResponse(cr); } catch(e) { cd = {error: e.message}; }
+
+        if (!rd.error) {
+          document.getElementById('resumeContent').textContent = rd.markdown;
+          document.getElementById('resumeOutput').classList.add('visible');
+          btnResume.innerHTML = 'Regenerate Resume';
+          resumeOk = true;
+        } else {
+          btnResume.innerHTML = 'Resume failed — retry?';
+          setTimeout(function() { btnResume.innerHTML = 'Generate Resume'; }, 8000);
+        }
+        if (!cd.error) {
+          document.getElementById('coverContent').textContent = cd.markdown;
+          document.getElementById('coverOutput').classList.add('visible');
+          btnCover.innerHTML = 'Regenerate Cover Letter';
+          coverOk = true;
+        } else {
+          btnCover.innerHTML = 'Cover letter failed — retry?';
+          setTimeout(function() { btnCover.innerHTML = 'Generate Cover Letter'; }, 8000);
+        }
+
+        btnBoth.innerHTML = (resumeOk && coverOk) ? 'Regenerate Both' : 'Generate Both';
+        var errors = [];
+        if (rd.error) errors.push('Resume: ' + rd.error);
+        if (cd.error) errors.push('Cover: ' + cd.error);
+        if (errors.length) stopGenStatus(errors.join(' | '), true);
+        else stopGenStatus((resumeOk && coverOk) ? 'Both documents ready' : 'Generation complete');
+
+        btnResume.disabled = false;
+        btnCover.disabled = false;
+        btnBoth.disabled = false;
+        if (resumeOk || coverOk) showApplyButton();
+        if (window.refreshTopbarCredits) refreshTopbarCredits();
+      } catch (err) {
+        stopGenStatus('Error: ' + err.message, true);
+        btnBoth.innerHTML = 'Error — retry?';
+        btnResume.disabled = false;
+        btnCover.disabled = false;
+        setTimeout(function() { btnBoth.innerHTML = 'Generate Both'; btnBoth.disabled = false; }, 5000);
+      }
+    }
+
+    /* ── Download ──────────────────────────────────────── */
+    function downloadDoc(docType, format) {
+      var url = '/api/jobs/' + JOB_ID + '/download/' + docType + '?format=' + format;
+      var iframe = document.createElement('iframe');
+      iframe.style.display = 'none';
+      iframe.src = url;
+      document.body.appendChild(iframe);
+      setTimeout(function() { iframe.remove(); }, 10000);
+    }
+
+    /* ── Copy Text ─────────────────────────────────────── */
+    function copyText(elementId, btn) {
+      var content = document.getElementById(elementId).textContent;
+      navigator.clipboard.writeText(content).then(function() {
+        var orig = btn.textContent;
+        btn.textContent = 'Copied!';
+        btn.style.color = '#34d399';
+        setTimeout(function() { btn.textContent = orig; btn.style.color = ''; }, 1500);
+      });
+    }
+
+    /* ── Revise Document ───────────────────────────────── */
+    async function reviseDoc(docType) {
+      var inputId = docType === 'resume' ? 'resumeRevision' : 'coverRevision';
+      var btnId = docType === 'resume' ? 'btnReviseResume' : 'btnReviseCover';
+      var contentId = docType === 'resume' ? 'resumeContent' : 'coverContent';
+      var instruction = document.getElementById(inputId).value.trim();
+
+      if (!instruction) {
+        document.getElementById(inputId).focus();
+        document.getElementById(inputId).style.borderColor = '#f87171';
+        setTimeout(function() { document.getElementById(inputId).style.borderColor = ''; }, 2000);
+        return;
+      }
+
+      var btn = document.getElementById(btnId);
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span> Revising...';
+      startGenStatus(reviseSteps);
+
+      try {
+        var resp = await fetch('/api/jobs/' + JOB_ID + '/revise', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ doc_type: docType, instruction: instruction })
+        });
+        var data = await parseResponse(resp);
+        document.getElementById(contentId).textContent = data.markdown;
+        btn.innerHTML = 'Revise';
+        btn.disabled = false;
+        document.getElementById(inputId).value = '';
+        stopGenStatus('Revision complete');
+        if (window.refreshTopbarCredits) refreshTopbarCredits();
+      } catch (err) {
+        stopGenStatus('Revision error: ' + err.message, true);
+        btn.innerHTML = 'Revise';
+        btn.disabled = false;
+      }
+    }
+  </script>
+
+</body>
+</html>

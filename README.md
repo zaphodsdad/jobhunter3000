@@ -91,4 +91,4 @@ jobhunter3000/
 
 ## License
 
-AGPL-3.0 — See [LICENSE](LICENSE) for full text.
+Proprietary. Copyright (c) 2026 John Burks. All rights reserved. See [LICENSE](LICENSE).

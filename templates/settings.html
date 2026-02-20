@@ -279,6 +279,30 @@
         </div>
 
         <!-- ════════════════════════════════════════════════════
+             USAJobs API
+             ════════════════════════════════════════════════════ -->
+        <div class="card">
+            <div class="card-header"><h2>USAJobs API</h2></div>
+            <p class="section-desc">
+                Free API key for federal job searches. Register at
+                <a href="https://developer.usajobs.gov/APIRequest/Index" target="_blank" style="color:var(--accent-primary);">developer.usajobs.gov</a>
+                — takes 5 minutes.
+            </p>
+            <div class="form-group">
+                <label for="usajobs_api_key">API Key</label>
+                <input type="text" id="usajobs_api_key" name="usajobs_api_key"
+                       value="{{ settings.usajobs_api_key }}"
+                       placeholder="Your USAJobs API key">
+            </div>
+            <div class="form-group">
+                <label for="usajobs_api_email">Registered Email</label>
+                <input type="email" id="usajobs_api_email" name="usajobs_api_email"
+                       value="{{ settings.usajobs_api_email }}"
+                       placeholder="Email used to register for USAJobs API">
+            </div>
+        </div>
+
+        <!-- ════════════════════════════════════════════════════
              Display
              ════════════════════════════════════════════════════ -->
         <div class="card">
@@ -304,13 +328,13 @@
                 {% set all_boards = [
                     ("indeed", "Indeed", true),
                     ("simplyhired", "SimplyHired", true),
-                    ("rigzone", "Rigzone", false),
-                    ("ziprecruiter", "ZipRecruiter", false),
+                    ("rigzone", "Rigzone", true),
+                    ("ziprecruiter", "ZipRecruiter", true),
+                    ("dice", "Dice", true),
+                    ("remoteok", "RemoteOK", true),
+                    ("weworkremotely", "We Work Remotely", true),
+                    ("usajobs", "USAJobs (needs API key)", true),
                     ("google_jobs", "Google Jobs", false),
-                    ("usajobs", "USAJobs", false),
-                    ("dice", "Dice", false),
-                    ("remoteok", "RemoteOK", false),
-                    ("weworkremotely", "We Work Remotely", false),
                 ] %}
                 {% for board_id, board_name, is_built in all_boards %}
                 <label class="board-check-item">

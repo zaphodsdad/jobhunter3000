@@ -102,6 +102,9 @@ DEFAULTS = {
         "PMP required",
     ],
     "max_days_old": 14,
+    # USAJobs API (free — register at developer.usajobs.gov)
+    "usajobs_api_key": "",
+    "usajobs_api_email": "",
     # Display preferences
     "display_min_score": 40,                  # Hide jobs below this score on Intel page
     # Job board master list — check/uncheck to enable scrapers

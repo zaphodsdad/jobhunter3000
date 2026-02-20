@@ -39,17 +39,38 @@ def get_digest_data():
 
     # Time window: last 24 hours
     yesterday = (datetime.now() - timedelta(hours=24)).isoformat()
+    min_score = settings.get("display_min_score", 40)
 
-    # New jobs found in last 24h
+    # New jobs found in last 24h (only above display threshold)
     new_jobs = conn.execute(
-        "SELECT * FROM jobs WHERE created_at > ? ORDER BY score DESC",
-        (yesterday,),
+        "SELECT * FROM jobs WHERE created_at > ? AND (score >= ? OR score IS NULL) ORDER BY score DESC",
+        (yesterday, min_score),
     ).fetchall()
     new_jobs = [dict(r) for r in new_jobs]
 
+    # Total new (for context — "X new, Y worth reviewing")
+    total_new_raw = conn.execute(
+        "SELECT COUNT(*) as cnt FROM jobs WHERE created_at > ?",
+        (yesterday,),
+    ).fetchone()["cnt"]
+
+    # Score tier breakdown (last 24h)
+    score_tiers = {}
+    for label, lo, hi in [("80+", 80, 999), ("60-79", 60, 79), ("40-59", 40, 59), ("below 40", 0, 39)]:
+        cnt = conn.execute(
+            "SELECT COUNT(*) as cnt FROM jobs WHERE created_at > ? AND score >= ? AND score <= ?",
+            (yesterday, lo, hi),
+        ).fetchone()["cnt"]
+        score_tiers[label] = cnt
+    unscored = conn.execute(
+        "SELECT COUNT(*) as cnt FROM jobs WHERE created_at > ? AND score IS NULL",
+        (yesterday,),
+    ).fetchone()["cnt"]
+    score_tiers["unscored"] = unscored
+
     # Top matches (score >= 60) not yet applied
     top_matches = conn.execute(
-        """SELECT * FROM jobs WHERE score >= 60 AND status NOT IN ('applied', 'rejected', 'offer', 'accepted')
+        """SELECT * FROM jobs WHERE score >= 60 AND status NOT IN ('applied', 'rejected', 'offer', 'accepted', 'archived')
            ORDER BY score DESC LIMIT 10"""
     ).fetchall()
     top_matches = [dict(r) for r in top_matches]
@@ -67,9 +88,10 @@ def get_digest_data():
     ).fetchall()
     runs = [dict(r) for r in runs]
 
-    # Jobs awaiting action (scored but status still 'new')
+    # Jobs awaiting action (scored above threshold, status still 'new')
     awaiting = conn.execute(
-        "SELECT COUNT(*) as cnt FROM jobs WHERE score IS NOT NULL AND status = 'new'"
+        "SELECT COUNT(*) as cnt FROM jobs WHERE score >= ? AND status = 'new'",
+        (min_score,),
     ).fetchone()["cnt"]
 
     # Total stats
@@ -81,6 +103,8 @@ def get_digest_data():
 
     return {
         "new_jobs": new_jobs,
+        "total_new_raw": total_new_raw,
+        "score_tiers": score_tiers,
         "top_matches": top_matches,
         "pipeline": pipeline,
         "runs": runs,
@@ -88,6 +112,7 @@ def get_digest_data():
         "total_jobs": total,
         "total_scored": scored,
         "avg_score": round(avg_score, 1) if avg_score else 0,
+        "min_score": min_score,
         "settings": settings,
     }
 
@@ -142,14 +167,18 @@ def build_email(data):
 
     # Quick Stats Bar
     total_new = len(new_jobs)
+    total_new_raw = data.get("total_new_raw", total_new)
     total_applied = pipeline.get("applied", 0)
     total_interviewing = pipeline.get("interviewing", 0)
+    score_tiers = data.get("score_tiers", {})
+    min_score = data.get("min_score", 40)
     html += f"""
     <!-- Quick Stats -->
     <div style="display:flex; justify-content:space-around; padding:16px 0; border-bottom:1px solid #2a2d3a;">
         <div style="text-align:center;">
             <div style="font-size:28px; font-weight:700; color:#22d3ee;">{total_new}</div>
-            <div style="font-size:11px; color:#666; text-transform:uppercase; letter-spacing:0.5px;">New (24h)</div>
+            <div style="font-size:11px; color:#666; text-transform:uppercase; letter-spacing:0.5px;">Worth Reviewing</div>
+            <div style="font-size:10px; color:#444;">of {total_new_raw} scraped</div>
         </div>
         <div style="text-align:center;">
             <div style="font-size:28px; font-weight:700; color:#a78bfa;">{total_applied}</div>
@@ -162,6 +191,38 @@ def build_email(data):
         <div style="text-align:center;">
             <div style="font-size:28px; font-weight:700; color:#4ade80;">{data['awaiting_action']}</div>
             <div style="font-size:11px; color:#666; text-transform:uppercase; letter-spacing:0.5px;">Need Review</div>
+        </div>
+    </div>
+
+    <!-- Score Breakdown (24h) -->
+    <div style="padding:12px 0; border-bottom:1px solid #2a2d3a;">
+        <div style="font-size:11px; color:#666; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px;">
+            Last 24h Score Breakdown
+        </div>
+        <div style="display:flex; justify-content:space-around; text-align:center;">
+            <div>
+                <span style="font-size:18px; font-weight:700; color:#4ade80;">{score_tiers.get('80+', 0)}</span>
+                <div style="font-size:10px; color:#4ade80;">80+</div>
+            </div>
+            <div>
+                <span style="font-size:18px; font-weight:700; color:#22d3ee;">{score_tiers.get('60-79', 0)}</span>
+                <div style="font-size:10px; color:#22d3ee;">60-79</div>
+            </div>
+            <div>
+                <span style="font-size:18px; font-weight:700; color:#fbbf24;">{score_tiers.get('40-59', 0)}</span>
+                <div style="font-size:10px; color:#fbbf24;">40-59</div>
+            </div>
+            <div>
+                <span style="font-size:18px; font-weight:700; color:#6b7280;">{score_tiers.get('below 40', 0)}</span>
+                <div style="font-size:10px; color:#6b7280;">&lt;40</div>
+            </div>
+            <div>
+                <span style="font-size:18px; font-weight:700; color:#444;">{score_tiers.get('unscored', 0)}</span>
+                <div style="font-size:10px; color:#444;">pending</div>
+            </div>
+        </div>
+        <div style="font-size:10px; color:#444; text-align:center; margin-top:6px;">
+            Showing jobs scoring {min_score}+ &middot; Change threshold in Settings
         </div>
     </div>
 """
@@ -304,11 +365,15 @@ def main():
     new_count = len(data["new_jobs"])
     top_score = max((j.get("score", 0) for j in data["top_matches"]), default=0)
     awaiting = data["awaiting_action"]
+    tiers = data.get("score_tiers", {})
+    hot = tiers.get("80+", 0)
 
-    if top_score >= 80:
-        subject = f"JH3000: {awaiting} jobs need review | Top match: {top_score}/100"
+    if hot > 0:
+        subject = f"JH3000: {hot} hot matches (80+) | {awaiting} need review"
+    elif top_score >= 60:
+        subject = f"JH3000: {new_count} worth reviewing | Top: {top_score}/100"
     elif new_count > 0:
-        subject = f"JH3000: {new_count} new jobs found | {awaiting} awaiting review"
+        subject = f"JH3000: {new_count} new (of {data.get('total_new_raw', new_count)} scraped) | {awaiting} to review"
     else:
         subject = f"JH3000: Morning briefing | {awaiting} awaiting review"
 

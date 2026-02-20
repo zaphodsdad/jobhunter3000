@@ -1459,8 +1459,7 @@
         btn.innerHTML = 'Regenerate Resume';
         btn.disabled = false;
         showApplyButton();
-        stopGenStatus('Resume ready — downloading .docx');
-        triggerDownload('resume', 'docx');
+        stopGenStatus('Resume ready');
 
         if (window.refreshTopbarCredits) refreshTopbarCredits();
       } catch (err) {
@@ -1488,8 +1487,7 @@
         btn.innerHTML = 'Regenerate Cover Letter';
         btn.disabled = false;
         showApplyButton();
-        stopGenStatus('Cover letter ready — downloading .docx');
-        triggerDownload('cover', 'docx');
+        stopGenStatus('Cover letter ready');
 
         if (window.refreshTopbarCredits) refreshTopbarCredits();
       } catch (err) {
@@ -1557,11 +1555,7 @@
         btnCover.disabled = false;
         btnBoth.disabled = false;
 
-        // Auto-download both .docx files
-        if (resumeOk) triggerDownload('resume', 'docx');
-        if (coverOk) setTimeout(function() { triggerDownload('cover', 'docx'); }, 500);
-
-        var msg = (resumeOk && coverOk) ? 'Both documents ready — downloading' : 'Generation complete';
+        var msg = (resumeOk && coverOk) ? 'Both documents ready' : 'Generation complete';
         stopGenStatus(msg);
         if (resumeOk || coverOk) showApplyButton();
         if (window.refreshTopbarCredits) refreshTopbarCredits();
@@ -1649,8 +1643,7 @@
         btn.innerHTML = 'Revise';
         btn.disabled = false;
         document.getElementById(inputId).value = '';
-        stopGenStatus('Revision complete — downloading updated .docx');
-        triggerDownload(docType, 'docx');
+        stopGenStatus('Revision complete');
 
         if (window.refreshTopbarCredits) refreshTopbarCredits();
       } catch (err) {

@@ -108,8 +108,8 @@
             accent-color: var(--accent-primary); width: 16px; height: 16px;
         }
         .board-check-label { font-weight: 500; color: var(--text-primary); }
-        .board-coming { opacity: 0.5; cursor: default; }
-        .board-coming:hover { border-color: var(--border); }
+        .board-coming { opacity: 0.7; }
+        .board-coming:hover { opacity: 1; }
         .board-soon {
             margin-left: auto; font-size: 10px; font-weight: 600;
             text-transform: uppercase; letter-spacing: 0.5px;
@@ -313,12 +313,11 @@
                     ("weworkremotely", "We Work Remotely", false),
                 ] %}
                 {% for board_id, board_name, is_built in all_boards %}
-                <label class="board-check-item{% if not is_built %} board-coming{% endif %}">
+                <label class="board-check-item">
                     <input type="checkbox" name="enabled_boards" value="{{ board_id }}"
-                           {% if board_id in settings.enabled_boards %}checked{% endif %}
-                           {% if not is_built %}disabled{% endif %}>
+                           {% if board_id in settings.enabled_boards %}checked{% endif %}>
                     <span class="board-check-label">{{ board_name }}</span>
-                    {% if not is_built %}<span class="board-soon">coming soon</span>{% endif %}
+                    {% if not is_built %}<span class="board-soon">no scraper yet</span>{% endif %}
                 </label>
                 {% endfor %}
             </div>

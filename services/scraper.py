@@ -1,6 +1,6 @@
 """
 Job board scraper — Playwright-based headless browser scraping.
-Currently supports Indeed. SimplyHired planned.
+Supports: Indeed, SimplyHired, Rigzone.
 """
 
 import logging
@@ -21,10 +21,31 @@ USER_AGENTS = [
     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
 ]
 
+# Board scraper registry — maps board name to scrape function
+BOARD_SCRAPERS = {}
+
 
 def _random_delay(min_s=3, max_s=8):
     """Human-like random delay between actions."""
     time.sleep(random.uniform(min_s, max_s))
+
+
+def _launch_browser(playwright):
+    """Launch a stealth headless browser. Returns (browser, context)."""
+    browser = playwright.chromium.launch(
+        headless=True,
+        args=["--no-sandbox", "--disable-blink-features=AutomationControlled"],
+    )
+    context = browser.new_context(
+        user_agent=random.choice(USER_AGENTS),
+        viewport={"width": 1920, "height": 1080},
+        locale="en-US",
+    )
+    context.add_init_script("""
+        Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+        Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] });
+    """)
+    return browser, context
 
 
 def _build_indeed_url(query: str, location: str, radius_miles: int = 30,
@@ -56,29 +77,13 @@ def scrape_indeed(profile: dict, max_pages: int = 3) -> list[dict]:
     radius = profile.get("radius_miles", 30)
     salary_min = profile.get("salary_min", 0)
 
-    if not query or not location:
+    if not query:
         return []
 
     jobs = []
 
     with sync_playwright() as p:
-        browser = p.chromium.launch(
-            headless=True,
-            args=["--no-sandbox", "--disable-blink-features=AutomationControlled"],
-        )
-
-        context = browser.new_context(
-            user_agent=random.choice(USER_AGENTS),
-            viewport={"width": 1920, "height": 1080},
-            locale="en-US",
-        )
-
-        # Stealth: hide webdriver signals
-        context.add_init_script("""
-            Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
-            Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] });
-        """)
-
+        browser, context = _launch_browser(p)
         page = context.new_page()
 
         for page_num in range(max_pages):
@@ -204,29 +209,340 @@ def _get_full_description(url: str, page) -> str | None:
     return None
 
 
-def run_scrape_for_profile(profile: dict) -> list[dict]:
-    """Run a scrape for a single search profile. Entry point for the pipeline."""
-    source = profile.get("boards", ["indeed"])[0] if profile.get("boards") else "indeed"
+# ═══════════════════════════════════════════════════════════════
+# SimplyHired Scraper
+# ═══════════════════════════════════════════════════════════════
 
-    if source == "indeed":
-        return scrape_indeed(profile, max_pages=2)
-    # Future: elif source == "simplyhired": return scrape_simplyhired(profile)
+def _build_simplyhired_url(query: str, location: str, radius_miles: int = 25,
+                           salary_min: int = 0) -> str:
+    """Build a SimplyHired search URL."""
+    params = {
+        "q": query,
+        "l": location,
+        "sr": str(radius_miles),
+        "t": "14",  # Last 14 days
+        "sb": "dd",  # Sort by date
+    }
+    if salary_min >= 45000:
+        # SimplyHired uses fixed salary brackets
+        brackets = [115000, 90000, 70000, 55000, 45000]
+        for b in brackets:
+            if salary_min >= b:
+                params["mip"] = str(b)
+                break
+    return "https://www.simplyhired.com/search?" + urllib.parse.urlencode(params)
 
-    return []
+
+def scrape_simplyhired(profile: dict, max_pages: int = 2) -> list[dict]:
+    """Scrape SimplyHired for jobs matching a search profile."""
+    query = profile.get("query", "")
+    location = profile.get("location", "")
+    radius = profile.get("radius_miles", 25)
+    salary_min = profile.get("salary_min", 0)
+
+    if not query:
+        return []
+
+    jobs = []
+
+    with sync_playwright() as p:
+        browser, context = _launch_browser(p)
+        page = context.new_page()
+
+        url = _build_simplyhired_url(query, location, radius, salary_min)
+
+        for page_num in range(max_pages):
+            logger.info(f"SimplyHired: page {page_num + 1}, query='{query}', location='{location}'")
+
+            try:
+                page.goto(url, wait_until="domcontentloaded", timeout=30000)
+                _random_delay(2, 5)
+                page.wait_for_selector('[data-testid="searchSerpJob"]', timeout=15000)
+            except Exception as e:
+                logger.warning(f"SimplyHired page load failed: {e}")
+                break
+
+            cards = page.query_selector_all('[data-testid="searchSerpJob"]')
+            if not cards:
+                logger.info(f"No job cards found on page {page_num + 1}")
+                break
+
+            logger.info(f"Found {len(cards)} job cards on page {page_num + 1}")
+
+            for card in cards:
+                try:
+                    job = _extract_simplyhired_card(card)
+                    if job and job.get("url"):
+                        job["source"] = "simplyhired"
+                        job["scraped_at"] = datetime.now().isoformat()
+                        jobs.append(job)
+                except Exception as e:
+                    logger.warning(f"Failed to extract SimplyHired card: {e}")
+                    continue
+
+            # Try to get full descriptions by clicking cards
+            for i, card in enumerate(cards):
+                if i >= 10:  # Limit to first 10 to avoid being too slow
+                    break
+                try:
+                    title_link = card.query_selector('[data-testid="searchSerpJobTitle"] a')
+                    if title_link:
+                        title_link.click()
+                        _random_delay(1, 2)
+                        desc_el = page.query_selector('[data-testid="viewJobBodyJobFullDescriptionContent"]')
+                        if desc_el:
+                            full_desc = (desc_el.inner_text() or "").strip()
+                            if full_desc and i < len(jobs):
+                                # Match by index since we processed in order
+                                job_key = card.get_attribute("data-jobkey") or ""
+                                for j in jobs:
+                                    if j.get("external_id") == job_key:
+                                        j["description"] = full_desc
+                                        break
+                except Exception:
+                    pass
+
+            # Pagination — cursor-based
+            next_link = page.query_selector('[data-testid="pageNumberBlockNext"]')
+            if next_link and page_num < max_pages - 1:
+                next_href = next_link.get_attribute("href")
+                if next_href:
+                    url = "https://www.simplyhired.com" + next_href if next_href.startswith("/") else next_href
+                    _random_delay(3, 6)
+                else:
+                    break
+            else:
+                break
+
+        browser.close()
+
+    logger.info(f"SimplyHired scrape complete: {len(jobs)} jobs for '{query}' in '{location}'")
+    return jobs
+
+
+def _extract_simplyhired_card(card) -> dict | None:
+    """Extract job data from a SimplyHired job card."""
+    job = {}
+
+    # Job key (external ID)
+    job_key = card.get_attribute("data-jobkey") or ""
+    if job_key:
+        job["external_id"] = job_key
+
+    # Title + URL
+    title_el = card.query_selector('[data-testid="searchSerpJobTitle"] a')
+    if title_el:
+        job["title"] = (title_el.inner_text() or "").strip()
+        href = title_el.get_attribute("href") or ""
+        if href.startswith("/"):
+            href = "https://www.simplyhired.com" + href
+        job["url"] = href
+    else:
+        return None
+
+    # Company
+    company_el = card.query_selector('[data-testid="companyName"]')
+    if company_el:
+        job["company"] = (company_el.inner_text() or "").strip()
+
+    # Location
+    loc_el = card.query_selector('[data-testid="searchSerpJobLocation"]')
+    if loc_el:
+        job["location"] = (loc_el.inner_text() or "").strip()
+
+    # Salary
+    salary_el = card.query_selector('[data-testid="salaryChip-0"]')
+    if salary_el:
+        job["salary_text"] = (salary_el.inner_text() or "").strip()
+
+    return job
+
+
+# ═══════════════════════════════════════════════════════════════
+# Rigzone Scraper
+# ═══════════════════════════════════════════════════════════════
+
+def _build_rigzone_url(query: str, location: str = "", page: int = 1) -> str:
+    """Build a Rigzone search URL.
+
+    Rigzone uses 'fl' for country/region filter (not free-text location).
+    We map common locations to their filter values.
+    """
+    params = {"keyword": query}
+    # Rigzone uses fl= for location filtering (country/region level)
+    if location:
+        loc_lower = location.lower()
+        if any(s in loc_lower for s in ["oklahoma", "texas", "united states", "us", "usa"]):
+            params["fl"] = "United States"
+        elif "canada" in loc_lower:
+            params["fl"] = "Canada"
+        elif "uk" in loc_lower or "united kingdom" in loc_lower:
+            params["fl"] = "United Kingdom"
+        else:
+            # Default to US for any US city/state
+            params["fl"] = "United States"
+    if page > 1:
+        params["page"] = str(page)
+    return "https://www.rigzone.com/oil/jobs/search/?" + urllib.parse.urlencode(params)
+
+
+def scrape_rigzone(profile: dict, max_pages: int = 2) -> list[dict]:
+    """Scrape Rigzone for oil & gas jobs matching a search profile."""
+    query = profile.get("query", "")
+    location = profile.get("location", "")
+
+    if not query:
+        return []
+
+    jobs = []
+
+    with sync_playwright() as p:
+        browser, context = _launch_browser(p)
+        page = context.new_page()
+
+        for page_num in range(1, max_pages + 1):
+            url = _build_rigzone_url(query, location, page_num)
+            logger.info(f"Rigzone: page {page_num}, query='{query}', location='{location}'")
+
+            try:
+                page.goto(url, wait_until="domcontentloaded", timeout=30000)
+                _random_delay(2, 5)
+                page.wait_for_selector("article.update-block", timeout=15000)
+            except Exception as e:
+                logger.warning(f"Rigzone page load failed: {e}")
+                break
+
+            cards = page.query_selector_all("article.update-block")
+            if not cards:
+                logger.info(f"No job cards found on page {page_num}")
+                break
+
+            logger.info(f"Found {len(cards)} job cards on page {page_num}")
+
+            for card in cards:
+                try:
+                    job = _extract_rigzone_card(card)
+                    if job and job.get("url"):
+                        job["source"] = "rigzone"
+                        job["scraped_at"] = datetime.now().isoformat()
+                        jobs.append(job)
+                except Exception as e:
+                    logger.warning(f"Failed to extract Rigzone card: {e}")
+                    continue
+
+            if page_num < max_pages:
+                _random_delay(3, 7)
+
+        browser.close()
+
+    logger.info(f"Rigzone scrape complete: {len(jobs)} jobs for '{query}' in '{location}'")
+    return jobs
+
+
+def _extract_rigzone_card(card) -> dict | None:
+    """Extract job data from a Rigzone job card."""
+    job = {}
+
+    # Title + URL
+    title_el = card.query_selector(".heading h3 a")
+    if title_el:
+        job["title"] = (title_el.inner_text() or "").strip()
+        href = title_el.get_attribute("href") or ""
+        if href.startswith("/"):
+            href = "https://www.rigzone.com" + href
+        job["url"] = href
+    else:
+        return None
+
+    # Company + Location from address element
+    address_el = card.query_selector(".heading address")
+    if address_el:
+        addr_text = (address_el.inner_text() or "").strip()
+        # Rigzone format: "CompanyName  Location" or just company
+        # Try to split on multiple spaces or newlines
+        parts = [p.strip() for p in addr_text.replace("\n", "  ").split("  ") if p.strip()]
+        if len(parts) >= 2:
+            job["company"] = parts[0]
+            job["location"] = parts[-1]
+        elif parts:
+            job["company"] = parts[0]
+
+    # Description snippet
+    desc_el = card.query_selector(".description .text p")
+    if desc_el:
+        job["description"] = (desc_el.inner_text() or "").strip()
+
+    # Experience requirement
+    exp_el = card.query_selector("footer.details .experience")
+    if exp_el:
+        exp_text = (exp_el.inner_text() or "").strip()
+        if exp_text:
+            job["description"] = (job.get("description", "") + f"\nExperience: {exp_text}").strip()
+
+    # Posted date
+    time_el = card.query_selector("footer.details time")
+    if time_el:
+        job["posted_date"] = (time_el.inner_text() or "").replace("Posted:", "").strip()
+
+    # Industry tag
+    job["industry"] = "Oil & Gas"
+
+    return job
+
+
+# ═══════════════════════════════════════════════════════════════
+# Scraper Registry + Pipeline
+# ═══════════════════════════════════════════════════════════════
+
+BOARD_SCRAPERS = {
+    "indeed": scrape_indeed,
+    "simplyhired": scrape_simplyhired,
+    "rigzone": scrape_rigzone,
+}
+
+
+def run_scrape_for_profile(profile: dict, enabled_boards: list = None) -> list[dict]:
+    """Run scrapes across all boards for a single search profile."""
+    boards = profile.get("boards", ["indeed"])
+    all_jobs = []
+
+    for board in boards:
+        # Skip boards that aren't enabled globally
+        if enabled_boards and board not in enabled_boards:
+            continue
+
+        scraper = BOARD_SCRAPERS.get(board)
+        if not scraper:
+            logger.info(f"No scraper for board '{board}', skipping")
+            continue
+
+        try:
+            jobs = scraper(profile, max_pages=2)
+            all_jobs.extend(jobs)
+        except Exception as e:
+            logger.error(f"Scraper '{board}' failed for profile: {e}")
+
+        # Delay between boards
+        if board != boards[-1]:
+            _random_delay(5, 10)
+
+    return all_jobs
 
 
 def run_full_scrape(settings: dict) -> dict:
-    """Run scrapes for all enabled search profiles. Returns summary."""
+    """Run scrapes for all enabled search profiles across all enabled boards."""
     from services.db import get_db, upsert_job
 
     profiles = settings.get("search_profiles", [])
     enabled = [p for p in profiles if p.get("enabled", True)]
+    enabled_boards = settings.get("enabled_boards", ["indeed", "simplyhired"])
 
     results = {
         "profiles_run": 0,
         "jobs_found": 0,
         "jobs_new": 0,
         "errors": [],
+        "boards_used": list(set(enabled_boards) & set(BOARD_SCRAPERS.keys())),
         "started_at": datetime.now().isoformat(),
     }
 
@@ -235,13 +551,13 @@ def run_full_scrape(settings: dict) -> dict:
     for profile in enabled:
         try:
             logger.info(f"Scraping profile: {profile.get('name', 'unnamed')}")
-            jobs = run_scrape_for_profile(profile)
+            jobs = run_scrape_for_profile(profile, enabled_boards)
             results["profiles_run"] += 1
             results["jobs_found"] += len(jobs)
 
             for job in jobs:
                 new_id = upsert_job(conn, job)
-                if new_id > 0:  # upsert_job returns -1 if URL already exists
+                if new_id > 0:
                     results["jobs_new"] += 1
 
         except Exception as e:

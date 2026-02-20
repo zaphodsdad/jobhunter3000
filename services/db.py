@@ -148,7 +148,8 @@ def get_dashboard_stats(conn: sqlite3.Connection) -> dict:
 
 def get_jobs(conn: sqlite3.Connection, status: str = None, source: str = None,
              sort: str = "created_at", order: str = "desc",
-             limit: int = 100, offset: int = 0) -> list[dict]:
+             limit: int = 100, offset: int = 0,
+             min_score: int = None) -> list[dict]:
     """Get paginated job list with optional filters."""
     where_parts = []
     params = []
@@ -156,9 +157,15 @@ def get_jobs(conn: sqlite3.Connection, status: str = None, source: str = None,
     if status:
         where_parts.append("status = ?")
         params.append(status)
+    else:
+        # Hide archived jobs unless explicitly filtering for them
+        where_parts.append("status != 'archived'")
     if source:
         where_parts.append("source = ?")
         params.append(source)
+    if min_score is not None and min_score > 0:
+        where_parts.append("(score >= ? OR score IS NULL)")
+        params.append(min_score)
 
     where_clause = " AND ".join(where_parts) if where_parts else "1=1"
 

@@ -102,6 +102,13 @@ DEFAULTS = {
         "PMP required",
     ],
     "max_days_old": 14,
+    # Display preferences
+    "display_min_score": 40,                  # Hide jobs below this score on Intel page
+    # Job board master list — check/uncheck to enable scrapers
+    "enabled_boards": [
+        "indeed",
+        "simplyhired",
+    ],
     # Candidate search preferences (Dossier page)
     "candidate_name": "",
     "candidate_location": "",

@@ -63,9 +63,17 @@ async def jobs_page(request: Request,
                     status: Optional[str] = None,
                     source: Optional[str] = None,
                     sort: Optional[str] = "score",
-                    order: Optional[str] = "desc"):
+                    order: Optional[str] = "desc",
+                    min_score: Optional[int] = None):
+    settings = load_settings()
+
+    # Use settings default if no override in URL
+    if min_score is None:
+        min_score = settings.get("display_min_score", 0)
+
     conn = get_db()
-    jobs = get_jobs(conn, status=status, source=source, sort=sort, order=order)
+    jobs = get_jobs(conn, status=status, source=source, sort=sort, order=order,
+                    limit=500, min_score=min_score)
     statuses = get_statuses(conn)
     sources = get_sources(conn)
     conn.close()
@@ -89,6 +97,7 @@ async def jobs_page(request: Request,
         "current_source": source or "",
         "current_sort": sort,
         "current_order": order,
+        "current_min_score": min_score,
     })
 
 
@@ -215,8 +224,13 @@ async def save_settings_route(request: Request):
         if isinstance(kw, str):
             data["exclude_keywords"] = [k.strip() for k in kw.split("\n") if k.strip()]
 
+    # Handle enabled_boards checkboxes (multi-value)
+    boards = form.getlist("enabled_boards")
+    data["enabled_boards"] = [b for b in boards if b]
+
     # Handle numeric fields
-    for field in ("notify_threshold", "priority_threshold", "max_days_old", "scrape_interval_hours"):
+    for field in ("notify_threshold", "priority_threshold", "max_days_old",
+                  "scrape_interval_hours", "display_min_score"):
         if field in data:
             try:
                 data[field] = int(data[field])
@@ -887,10 +901,12 @@ async def api_generate_cover_letter(job_id: int):
 
 
 @app.get("/api/jobs/{job_id}/download/{doc_type}")
-async def api_download_doc(job_id: int, doc_type: str):
-    """Download a generated resume or cover letter as .docx."""
+async def api_download_doc(job_id: int, doc_type: str, format: str = "docx"):
+    """Download a generated resume or cover letter in docx/pdf/md format."""
     if doc_type not in ("resume", "cover"):
         return JSONResponse({"error": "Invalid doc type"}, status_code=400)
+    if format not in ("docx", "pdf", "md"):
+        return JSONResponse({"error": "Invalid format. Use docx, pdf, or md."}, status_code=400)
 
     conn = get_db()
     job = get_job(conn, job_id)
@@ -899,20 +915,32 @@ async def api_download_doc(job_id: int, doc_type: str):
         return JSONResponse({"error": "Job not found"}, status_code=404)
 
     field = "resume_path" if doc_type == "resume" else "cover_letter_path"
-    path = job.get(field)
-    if not path or not os.path.exists(path):
+    base_path = job.get(field)
+    if not base_path:
         return JSONResponse({"error": f"No {doc_type} generated yet"}, status_code=404)
 
-    # Build a nice filename: John_Burks_Resume_CompanyName.docx
+    # base_path is stored without extension (e.g., data/generated/57_resume)
+    # Handle old records that might still have an extension
+    if base_path.endswith((".docx", ".pdf", ".md")):
+        base_path = os.path.splitext(base_path)[0]
+
+    file_path = f"{base_path}.{format}"
+    if not os.path.exists(file_path):
+        return JSONResponse({"error": f"No {format} file found. Try regenerating."}, status_code=404)
+
     company = (job.get("company") or "Unknown").replace(" ", "_")[:30]
-    if doc_type == "resume":
-        download_name = f"John_Burks_Resume_{company}.docx"
-    else:
-        download_name = f"John_Burks_CoverLetter_{company}.docx"
+    label = "Resume" if doc_type == "resume" else "CoverLetter"
+    download_name = f"John_Burks_{label}_{company}.{format}"
+
+    media_types = {
+        "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "pdf": "application/pdf",
+        "md": "text/markdown",
+    }
 
     return FileResponse(
-        path,
-        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        file_path,
+        media_type=media_types[format],
         filename=download_name,
     )
 

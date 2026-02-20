@@ -9,6 +9,7 @@ import sqlite3
 from docx import Document
 from docx.shared import Pt, Inches, RGBColor
 from docx.enum.text import WD_ALIGN_PARAGRAPH
+from fpdf import FPDF
 from services.llm import llm_chat
 from services.resumes import load_candidate_profile
 from services.settings import load_settings
@@ -152,6 +153,89 @@ def _add_formatted_text(paragraph, text):
                 paragraph.add_run(part)
 
 
+def _md_to_pdf(markdown: str, output_path: str):
+    """Convert markdown text to a clean PDF file."""
+    pdf = FPDF()
+    pdf.set_auto_page_break(auto=True, margin=20)
+    pdf.add_page()
+    pdf.set_margins(20, 15, 20)
+
+    lines = markdown.split("\n")
+    for line in lines:
+        stripped = line.strip()
+
+        # Skip empty lines — add small spacing
+        if not stripped:
+            pdf.ln(3)
+            continue
+
+        # Horizontal rule
+        if stripped in ("---", "***", "___"):
+            y = pdf.get_y()
+            pdf.set_draw_color(180, 180, 180)
+            pdf.line(20, y, 190, y)
+            pdf.ln(3)
+            continue
+
+        # Strip bold/italic markers for PDF (fpdf2 doesn't do inline mixed easily)
+        clean = re.sub(r"\*\*(.+?)\*\*", r"\1", stripped)
+        clean = re.sub(r"\*(.+?)\*", r"\1", clean)
+
+        # H1
+        if stripped.startswith("# ") and not stripped.startswith("## "):
+            text = re.sub(r"\*\*(.+?)\*\*", r"\1", stripped[2:].strip())
+            pdf.set_font("Helvetica", "B", 16)
+            pdf.set_text_color(26, 26, 26)
+            pdf.cell(0, 8, text, align="C", new_x="LMARGIN", new_y="NEXT")
+            pdf.ln(1)
+            continue
+
+        # H2
+        if stripped.startswith("## "):
+            text = re.sub(r"\*\*(.+?)\*\*", r"\1", stripped[3:].strip())
+            pdf.ln(3)
+            pdf.set_font("Helvetica", "B", 12)
+            pdf.set_text_color(26, 86, 138)
+            pdf.cell(0, 7, text.upper(), new_x="LMARGIN", new_y="NEXT")
+            # Underline
+            y = pdf.get_y()
+            pdf.set_draw_color(26, 86, 138)
+            pdf.line(20, y, 190, y)
+            pdf.ln(2)
+            continue
+
+        # H3
+        if stripped.startswith("### "):
+            text = re.sub(r"\*\*(.+?)\*\*", r"\1", stripped[4:].strip())
+            pdf.ln(2)
+            pdf.set_font("Helvetica", "B", 11)
+            pdf.set_text_color(51, 51, 51)
+            pdf.cell(0, 6, text, new_x="LMARGIN", new_y="NEXT")
+            pdf.ln(1)
+            continue
+
+        # Bullet point
+        if re.match(r"^[-*]\s", stripped):
+            text = clean[2:].strip()
+            pdf.set_font("Helvetica", "", 10)
+            pdf.set_text_color(51, 51, 51)
+            x = pdf.get_x()
+            pdf.cell(8, 5, chr(8226), new_x="END")  # bullet char
+            pdf.multi_cell(0, 5, text, new_x="LMARGIN", new_y="NEXT")
+            continue
+
+        # Regular paragraph
+        pdf.set_font("Helvetica", "", 10)
+        pdf.set_text_color(51, 51, 51)
+        # Center contact-like lines
+        if len(clean) < 120 and ("|" in clean or "@" in clean):
+            pdf.cell(0, 5, clean, align="C", new_x="LMARGIN", new_y="NEXT")
+        else:
+            pdf.multi_cell(0, 5, clean, new_x="LMARGIN", new_y="NEXT")
+
+    pdf.output(output_path)
+
+
 def _pick_best_resume(job: dict) -> tuple[str, str]:
     """Pick the best-matching uploaded resume for a job.
 
@@ -275,17 +359,19 @@ Output the resume in clean markdown. No commentary before or after — just the 
     with open(md_path, "w") as f:
         f.write(result)
 
-    # Convert to DOCX
-    docx_filename = f"{job['id']}_resume.docx"
-    docx_path = os.path.join(GENERATED_DIR, docx_filename)
+    # Convert to DOCX and PDF
+    docx_path = os.path.join(GENERATED_DIR, f"{job['id']}_resume.docx")
+    pdf_path = os.path.join(GENERATED_DIR, f"{job['id']}_resume.pdf")
     _md_to_docx(result, docx_path, doc_type="resume")
+    _md_to_pdf(result, pdf_path)
 
-    # Update job record
+    # Update job record (store base path without extension)
+    base_path = os.path.join(GENERATED_DIR, f"{job['id']}_resume")
     db_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "jobs.db")
     conn = sqlite3.connect(db_path)
     conn.execute(
         "UPDATE jobs SET resume_path = ?, updated_at = datetime('now') WHERE id = ?",
-        (docx_path, job["id"]),
+        (base_path, job["id"]),
     )
     conn.commit()
     conn.close()
@@ -293,8 +379,7 @@ Output the resume in clean markdown. No commentary before or after — just the 
     return {
         "ok": True,
         "markdown": result,
-        "path": docx_path,
-        "docx_filename": docx_filename,
+        "path": base_path,
         "resume_source": resume_name,
     }
 
@@ -367,17 +452,19 @@ Output only the cover letter. No commentary before or after."""
     with open(md_path, "w") as f:
         f.write(result)
 
-    # Convert to DOCX
-    docx_filename = f"{job['id']}_cover.docx"
-    docx_path = os.path.join(GENERATED_DIR, docx_filename)
+    # Convert to DOCX and PDF
+    docx_path = os.path.join(GENERATED_DIR, f"{job['id']}_cover.docx")
+    pdf_path = os.path.join(GENERATED_DIR, f"{job['id']}_cover.pdf")
     _md_to_docx(result, docx_path, doc_type="cover")
+    _md_to_pdf(result, pdf_path)
 
-    # Update job record
+    # Update job record (store base path without extension)
+    base_path = os.path.join(GENERATED_DIR, f"{job['id']}_cover")
     db_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "jobs.db")
     conn = sqlite3.connect(db_path)
     conn.execute(
         "UPDATE jobs SET cover_letter_path = ?, updated_at = datetime('now') WHERE id = ?",
-        (docx_path, job["id"]),
+        (base_path, job["id"]),
     )
     conn.commit()
     conn.close()
@@ -385,6 +472,5 @@ Output only the cover letter. No commentary before or after."""
     return {
         "ok": True,
         "markdown": result,
-        "path": docx_path,
-        "docx_filename": docx_filename,
+        "path": base_path,
     }

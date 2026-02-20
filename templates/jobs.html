@@ -572,6 +572,11 @@
       background: rgba(0, 229, 255, 0.2);
     }
 
+    .btn-download-active {
+      background: rgba(0, 229, 255, 0.18);
+      font-weight: 600;
+    }
+
     .gen-content {
       max-height: 400px;
       overflow-y: auto;
@@ -629,6 +634,17 @@
         {% for src in sources %}
         <option value="{{ src }}" {% if current_source == src %}selected{% endif %}>{{ src | capitalize }}</option>
         {% endfor %}
+      </select>
+
+      <label for="filter-min-score">Min Score</label>
+      <select id="filter-min-score" onchange="applyFilters()">
+        <option value="0" {% if current_min_score == 0 %}selected{% endif %}>All Scores</option>
+        <option value="30" {% if current_min_score == 30 %}selected{% endif %}>30+</option>
+        <option value="40" {% if current_min_score == 40 %}selected{% endif %}>40+</option>
+        <option value="50" {% if current_min_score == 50 %}selected{% endif %}>50+</option>
+        <option value="60" {% if current_min_score == 60 %}selected{% endif %}>60+</option>
+        <option value="70" {% if current_min_score == 70 %}selected{% endif %}>70+</option>
+        <option value="80" {% if current_min_score == 80 %}selected{% endif %}>80+</option>
       </select>
 
       <label for="filter-sort">Sort</label>
@@ -796,9 +812,12 @@
           <div class="gen-output" id="resumeOutput">
             <div class="gen-output-header">
               <h4>Generated Resume</h4>
-              <div style="display:flex;gap:6px;">
-                <a class="btn-copy" id="resumeDownload" href="#" download style="text-decoration:none;">Download .docx</a>
-                <button class="btn-copy" onclick="copyGenerated('resumeContent')">Copy Text</button>
+              <div style="display:flex;gap:6px;align-items:center;">
+                <span style="font-size:0.7rem;color:#6b7280;">Download:</span>
+                <a class="btn-copy btn-download-active" href="#" download style="text-decoration:none;" onclick="downloadDoc('resume','docx')">.docx</a>
+                <a class="btn-copy" href="#" download style="text-decoration:none;" onclick="downloadDoc('resume','pdf')">.pdf</a>
+                <a class="btn-copy" href="#" download style="text-decoration:none;" onclick="downloadDoc('resume','md')">.md</a>
+                <button class="btn-copy" onclick="copyGenerated('resumeContent')">Copy</button>
               </div>
             </div>
             <div class="gen-content" id="resumeContent"></div>
@@ -808,9 +827,12 @@
           <div class="gen-output" id="coverOutput">
             <div class="gen-output-header">
               <h4>Generated Cover Letter</h4>
-              <div style="display:flex;gap:6px;">
-                <a class="btn-copy" id="coverDownload" href="#" download style="text-decoration:none;">Download .docx</a>
-                <button class="btn-copy" onclick="copyGenerated('coverContent')">Copy Text</button>
+              <div style="display:flex;gap:6px;align-items:center;">
+                <span style="font-size:0.7rem;color:#6b7280;">Download:</span>
+                <a class="btn-copy btn-download-active" href="#" download style="text-decoration:none;" onclick="downloadDoc('cover','docx')">.docx</a>
+                <a class="btn-copy" href="#" download style="text-decoration:none;" onclick="downloadDoc('cover','pdf')">.pdf</a>
+                <a class="btn-copy" href="#" download style="text-decoration:none;" onclick="downloadDoc('cover','md')">.md</a>
+                <button class="btn-copy" onclick="copyGenerated('coverContent')">Copy</button>
               </div>
             </div>
             <div class="gen-content" id="coverContent"></div>
@@ -841,6 +863,7 @@
     function applyFilters() {
       var status = document.getElementById('filter-status').value;
       var source = document.getElementById('filter-source').value;
+      var minScore = document.getElementById('filter-min-score').value;
       var sortVal = document.getElementById('filter-sort').value;
 
       var lastUnderscore = sortVal.lastIndexOf('_');
@@ -850,6 +873,7 @@
       var params = new URLSearchParams();
       if (status) params.set('status', status);
       if (source) params.set('source', source);
+      if (minScore && minScore !== '0') params.set('min_score', minScore);
       if (sort) params.set('sort', sort);
       if (order) params.set('order', order);
 
@@ -871,6 +895,13 @@
       params.set('sort', column);
       params.set('order', order);
       window.location.href = '/jobs?' + params.toString();
+    }
+
+    /* ── Update job count badge ──────────────────────────── */
+    function updateJobCount() {
+      var count = document.querySelectorAll('tr.job-row').length;
+      var el = document.querySelector('.filter-count strong');
+      if (el) el.textContent = count;
     }
 
     /* ── Inline Status Change (table) ──────────────────── */
@@ -899,7 +930,13 @@
           row.style.background = 'rgba(74, 222, 128, 0.08)';
           setTimeout(function() { row.style.background = ''; }, 800);
 
-          if (newStatus === 'rejected' || newStatus === 'archived') {
+          if (newStatus === 'archived') {
+            setTimeout(function() {
+              row.style.transition = 'opacity 0.5s, max-height 0.5s';
+              row.style.opacity = '0';
+              setTimeout(function() { row.remove(); updateJobCount(); }, 500);
+            }, 800);
+          } else if (newStatus === 'rejected') {
             setTimeout(function() {
               row.style.transition = 'opacity 0.5s';
               row.style.opacity = '0.3';
@@ -1078,6 +1115,15 @@
             badge.className = 'status-badge status-' + newStatus;
             badge.textContent = newStatus.charAt(0).toUpperCase() + newStatus.slice(1);
           }
+          // Remove row if archived
+          if (newStatus === 'archived' && row) {
+            closeModal();
+            setTimeout(function() {
+              row.style.transition = 'opacity 0.5s';
+              row.style.opacity = '0';
+              setTimeout(function() { row.remove(); updateJobCount(); }, 500);
+            }, 300);
+          }
         }
       });
     }
@@ -1114,7 +1160,6 @@
         if (data.error) throw new Error(data.error);
 
         document.getElementById('resumeContent').textContent = data.markdown;
-        document.getElementById('resumeDownload').href = '/api/jobs/' + currentJobId + '/download/resume';
         document.getElementById('resumeOutput').classList.add('visible');
         btn.innerHTML = 'Regenerate Resume';
         btn.disabled = false;
@@ -1141,7 +1186,6 @@
         if (data.error) throw new Error(data.error);
 
         document.getElementById('coverContent').textContent = data.markdown;
-        document.getElementById('coverDownload').href = '/api/jobs/' + currentJobId + '/download/cover';
         document.getElementById('coverOutput').classList.add('visible');
         btn.innerHTML = 'Regenerate Cover Letter';
         btn.disabled = false;
@@ -1152,6 +1196,13 @@
         btn.disabled = false;
         setTimeout(function() { btn.innerHTML = 'Generate Cover Letter'; }, 3000);
       }
+    }
+
+    /* ── Download Generated Doc ────────────────────────── */
+    function downloadDoc(docType, format) {
+      if (!currentJobId) return;
+      event.preventDefault();
+      window.open('/api/jobs/' + currentJobId + '/download/' + docType + '?format=' + format, '_blank');
     }
 
     /* ── Copy Generated Content ────────────────────────── */

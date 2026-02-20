@@ -93,6 +93,29 @@
         }
         .model-status.error { color: #f87171; }
         .model-status.ok { color: #4ade80; }
+
+        .board-checklist {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+        }
+        .board-check-item {
+            display: flex; align-items: center; gap: 10px;
+            padding: 10px 14px; background: var(--bg-nav);
+            border: 1px solid var(--border); border-radius: 6px;
+            cursor: pointer; transition: all 0.15s ease; font-size: 14px;
+        }
+        .board-check-item:hover { border-color: var(--accent-primary); }
+        .board-check-item input[type="checkbox"] {
+            accent-color: var(--accent-primary); width: 16px; height: 16px;
+        }
+        .board-check-label { font-weight: 500; color: var(--text-primary); }
+        .board-coming { opacity: 0.5; cursor: default; }
+        .board-coming:hover { border-color: var(--border); }
+        .board-soon {
+            margin-left: auto; font-size: 10px; font-weight: 600;
+            text-transform: uppercase; letter-spacing: 0.5px;
+            color: var(--text-muted); background: rgba(107, 114, 128, 0.15);
+            padding: 2px 8px; border-radius: 4px;
+        }
     </style>
 </head>
 <body>
@@ -252,6 +275,52 @@
                            value="{{ settings.priority_threshold }}"
                            min="0" max="100" step="1">
                 </div>
+            </div>
+        </div>
+
+        <!-- ════════════════════════════════════════════════════
+             Display
+             ════════════════════════════════════════════════════ -->
+        <div class="card">
+            <div class="card-header"><h2>Display</h2></div>
+            <p class="section-desc">Control what shows up on the Intel page. Jobs below the minimum score are hidden (not deleted).</p>
+
+            <div class="form-group">
+                <label for="display_min_score">Minimum Score to Display (0 = show all)</label>
+                <input type="number" id="display_min_score" name="display_min_score"
+                       value="{{ settings.display_min_score }}"
+                       min="0" max="100" step="5">
+            </div>
+        </div>
+
+        <!-- ════════════════════════════════════════════════════
+             Job Boards
+             ════════════════════════════════════════════════════ -->
+        <div class="card">
+            <div class="card-header"><h2>Job Boards</h2></div>
+            <p class="section-desc">Which boards to scrape. Uncheck to disable. Boards marked "coming soon" aren't built yet.</p>
+
+            <div class="board-checklist" id="boardChecklist">
+                {% set all_boards = [
+                    ("indeed", "Indeed", true),
+                    ("simplyhired", "SimplyHired", true),
+                    ("rigzone", "Rigzone", false),
+                    ("ziprecruiter", "ZipRecruiter", false),
+                    ("google_jobs", "Google Jobs", false),
+                    ("usajobs", "USAJobs", false),
+                    ("dice", "Dice", false),
+                    ("remoteok", "RemoteOK", false),
+                    ("weworkremotely", "We Work Remotely", false),
+                ] %}
+                {% for board_id, board_name, is_built in all_boards %}
+                <label class="board-check-item{% if not is_built %} board-coming{% endif %}">
+                    <input type="checkbox" name="enabled_boards" value="{{ board_id }}"
+                           {% if board_id in settings.enabled_boards %}checked{% endif %}
+                           {% if not is_built %}disabled{% endif %}>
+                    <span class="board-check-label">{{ board_name }}</span>
+                    {% if not is_built %}<span class="board-soon">coming soon</span>{% endif %}
+                </label>
+                {% endfor %}
             </div>
         </div>
 

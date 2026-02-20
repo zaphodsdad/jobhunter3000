@@ -514,9 +514,47 @@
       background: rgba(168, 85, 247, 0.2);
     }
 
+    .btn-gen-both {
+      background: rgba(0, 229, 255, 0.1);
+      color: #00e5ff;
+      border-color: rgba(0, 229, 255, 0.3);
+    }
+
+    .btn-gen-both:hover {
+      background: rgba(0, 229, 255, 0.2);
+    }
+
     .btn-gen:disabled {
       opacity: 0.5;
       cursor: wait;
+    }
+
+    /* ── Apply Now Button ─────────────────────────────── */
+    .gen-apply {
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid #2a2f3e;
+    }
+
+    .btn-apply {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0.65rem 1.5rem;
+      font-size: 0.95rem;
+      font-weight: 700;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.15s;
+      text-decoration: none;
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.4);
+    }
+
+    .btn-apply:hover {
+      background: rgba(16, 185, 129, 0.25);
+      color: #4ade80;
     }
 
     .btn-gen .spinner {
@@ -530,6 +568,18 @@
 
     @keyframes spin {
       to { transform: rotate(360deg); }
+    }
+
+    .gen-status {
+      font-size: 0.78rem;
+      color: #6b7280;
+      margin-top: 8px;
+      min-height: 1.2em;
+      transition: opacity 0.3s;
+    }
+
+    .gen-status.active {
+      color: #00e5ff;
     }
 
     /* ── Generated Output ──────────────────────────────── */
@@ -572,9 +622,50 @@
       background: rgba(0, 229, 255, 0.2);
     }
 
-    .btn-download-active {
-      background: rgba(0, 229, 255, 0.18);
+    /* ── Download Bar ─────────────────────────────────── */
+    .gen-download-bar {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid #1a1f2e;
+    }
+
+    .format-select {
+      background: #111318;
+      color: #e2e8f0;
+      border: 1px solid #2a2f3e;
+      border-radius: 6px;
+      padding: 0.45rem 0.6rem;
+      font-size: 0.82rem;
+      cursor: pointer;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .format-select:hover,
+    .format-select:focus {
+      border-color: #00e5ff;
+    }
+
+    .btn-download {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 0.45rem 1.2rem;
+      font-size: 0.85rem;
       font-weight: 600;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s;
+      background: rgba(0, 229, 255, 0.12);
+      color: #00e5ff;
+      border: 1px solid rgba(0, 229, 255, 0.3);
+    }
+
+    .btn-download:hover {
+      background: rgba(0, 229, 255, 0.22);
     }
 
     .gen-content {
@@ -806,36 +897,57 @@
             <button class="btn-gen btn-gen-cover" id="btnGenCover" onclick="generateCoverLetter()">
               Generate Cover Letter
             </button>
+            <button class="btn-gen btn-gen-both" id="btnGenBoth" onclick="generateBoth()">
+              Generate Both
+            </button>
           </div>
+          <div class="gen-status" id="genStatus"></div>
 
           <!-- Resume output -->
           <div class="gen-output" id="resumeOutput">
             <div class="gen-output-header">
               <h4>Generated Resume</h4>
-              <div style="display:flex;gap:6px;align-items:center;">
-                <span style="font-size:0.7rem;color:#6b7280;">Download:</span>
-                <a class="btn-copy btn-download-active" href="#" download style="text-decoration:none;" onclick="downloadDoc('resume','docx')">.docx</a>
-                <a class="btn-copy" href="#" download style="text-decoration:none;" onclick="downloadDoc('resume','pdf')">.pdf</a>
-                <a class="btn-copy" href="#" download style="text-decoration:none;" onclick="downloadDoc('resume','md')">.md</a>
-                <button class="btn-copy" onclick="copyGenerated('resumeContent')">Copy</button>
-              </div>
+              <button class="btn-copy" onclick="copyGenerated('resumeContent')">Copy text</button>
             </div>
             <div class="gen-content" id="resumeContent"></div>
+            <div class="gen-download-bar">
+              <select class="format-select" id="resumeFormat">
+                <option value="docx">.docx (Word)</option>
+                <option value="pdf">.pdf</option>
+                <option value="txt">.txt (Plain Text)</option>
+                <option value="md">.md (Markdown)</option>
+              </select>
+              <button class="btn-download" onclick="downloadDoc('resume', document.getElementById('resumeFormat').value)">
+                Download Resume
+              </button>
+            </div>
           </div>
 
           <!-- Cover letter output -->
           <div class="gen-output" id="coverOutput">
             <div class="gen-output-header">
               <h4>Generated Cover Letter</h4>
-              <div style="display:flex;gap:6px;align-items:center;">
-                <span style="font-size:0.7rem;color:#6b7280;">Download:</span>
-                <a class="btn-copy btn-download-active" href="#" download style="text-decoration:none;" onclick="downloadDoc('cover','docx')">.docx</a>
-                <a class="btn-copy" href="#" download style="text-decoration:none;" onclick="downloadDoc('cover','pdf')">.pdf</a>
-                <a class="btn-copy" href="#" download style="text-decoration:none;" onclick="downloadDoc('cover','md')">.md</a>
-                <button class="btn-copy" onclick="copyGenerated('coverContent')">Copy</button>
-              </div>
+              <button class="btn-copy" onclick="copyGenerated('coverContent')">Copy text</button>
             </div>
             <div class="gen-content" id="coverContent"></div>
+            <div class="gen-download-bar">
+              <select class="format-select" id="coverFormat">
+                <option value="docx">.docx (Word)</option>
+                <option value="pdf">.pdf</option>
+                <option value="txt">.txt (Plain Text)</option>
+                <option value="md">.md (Markdown)</option>
+              </select>
+              <button class="btn-download" onclick="downloadDoc('cover', document.getElementById('coverFormat').value)">
+                Download Cover Letter
+              </button>
+            </div>
+          </div>
+
+          <!-- Apply Now button — appears when materials are ready -->
+          <div class="gen-apply" id="applySection" style="display:none;">
+            <a class="btn-apply" id="btnApply" href="#" target="_blank" rel="noopener">
+              Apply Now &rarr;
+            </a>
           </div>
         </div>
 
@@ -992,6 +1104,10 @@
       document.getElementById('btnGenResume').innerHTML = 'Generate Resume';
       document.getElementById('btnGenCover').disabled = false;
       document.getElementById('btnGenCover').innerHTML = 'Generate Cover Letter';
+      document.getElementById('btnGenBoth').disabled = false;
+      document.getElementById('btnGenBoth').innerHTML = 'Generate Both';
+      document.getElementById('applySection').style.display = 'none';
+      stopGenStatus('');
 
       // Show modal with loading state
       document.getElementById('modalTitle').textContent = 'Loading...';
@@ -1070,12 +1186,40 @@
       // Notes
       document.getElementById('modalNotes').value = job.notes || '';
 
-      // If already generated, show the buttons differently
+      // Set up Apply button URL
+      var btnApply = document.getElementById('btnApply');
+      var applySection = document.getElementById('applySection');
+      if (job.url && !job.url.startsWith('import://')) {
+        btnApply.href = job.url;
+      } else {
+        btnApply.href = '#';
+      }
+      applySection.style.display = 'none';
+
+      // Show previously generated documents with download bars
       if (job.resume_path) {
         document.getElementById('btnGenResume').innerHTML = 'Regenerate Resume';
+        if (job.resume_markdown) {
+          document.getElementById('resumeContent').textContent = job.resume_markdown;
+        } else {
+          document.getElementById('resumeContent').textContent = '(Previously generated — download available)';
+        }
+        document.getElementById('resumeOutput').classList.add('visible');
       }
       if (job.cover_letter_path) {
         document.getElementById('btnGenCover').innerHTML = 'Regenerate Cover Letter';
+        if (job.cover_markdown) {
+          document.getElementById('coverContent').textContent = job.cover_markdown;
+        } else {
+          document.getElementById('coverContent').textContent = '(Previously generated — download available)';
+        }
+        document.getElementById('coverOutput').classList.add('visible');
+      }
+      if (job.resume_path && job.cover_letter_path) {
+        document.getElementById('btnGenBoth').innerHTML = 'Regenerate Both';
+      }
+      if ((job.resume_path || job.cover_letter_path) && job.url && !job.url.startsWith('import://')) {
+        applySection.style.display = 'block';
       }
     }
 
@@ -1146,29 +1290,113 @@
       });
     }
 
+    /* ── Generation Status Messages ──────────────────── */
+    var genStatusTimer = null;
+    var resumeSteps = [
+      'Analyzing job posting...',
+      'Matching your skills and experience...',
+      'Identifying key qualifications...',
+      'Tailoring resume sections...',
+      'Writing experience highlights...',
+      'Formatting document...',
+    ];
+    var coverSteps = [
+      'Analyzing job posting...',
+      'Identifying company and role details...',
+      'Matching your background to requirements...',
+      'Drafting opening paragraph...',
+      'Writing body paragraphs...',
+      'Polishing and formatting...',
+    ];
+    var bothSteps = [
+      'Analyzing job posting...',
+      'Matching your skills and experience...',
+      'Identifying key qualifications...',
+      'Writing tailored resume...',
+      'Drafting cover letter...',
+      'Highlighting relevant experience...',
+      'Polishing both documents...',
+      'Formatting for download...',
+    ];
+
+    function startGenStatus(steps) {
+      var el = document.getElementById('genStatus');
+      var idx = 0;
+      el.textContent = steps[0];
+      el.classList.add('active');
+      if (genStatusTimer) clearInterval(genStatusTimer);
+      genStatusTimer = setInterval(function() {
+        idx++;
+        if (idx < steps.length) {
+          el.textContent = steps[idx];
+        }
+        // After all steps, cycle the last one with dots
+        if (idx >= steps.length) {
+          var dots = '.'.repeat((idx - steps.length) % 3 + 1);
+          el.textContent = steps[steps.length - 1].replace('...', dots);
+        }
+      }, 3000);
+    }
+
+    function stopGenStatus(message, isError) {
+      if (genStatusTimer) { clearInterval(genStatusTimer); genStatusTimer = null; }
+      var el = document.getElementById('genStatus');
+      el.textContent = message || '';
+      el.classList.remove('active');
+      if (message) {
+        el.style.color = isError ? '#f87171' : '#34d399';
+        var delay = isError ? 8000 : 4000;
+        setTimeout(function() { el.textContent = ''; el.style.color = ''; }, delay);
+      }
+    }
+
+    /* ── Show Apply button if job has a URL ──────────── */
+    function showApplyButton() {
+      var applySection = document.getElementById('applySection');
+      var btnApply = document.getElementById('btnApply');
+      if (btnApply.href && btnApply.href !== '#' && btnApply.href !== window.location.href + '#') {
+        applySection.style.display = 'block';
+      }
+    }
+
     /* ── Generate Resume ───────────────────────────────── */
+    async function parseResponse(resp) {
+      var text = await resp.text();
+      try {
+        var data = JSON.parse(text);
+        if (data.error) throw new Error(data.error);
+        return data;
+      } catch (e) {
+        if (text.includes('Internal Server Error')) throw new Error('Server error — check logs');
+        throw e;
+      }
+    }
+
     async function generateResume() {
       if (!currentJobId) return;
       var btn = document.getElementById('btnGenResume');
       btn.disabled = true;
       btn.innerHTML = '<span class="spinner"></span> Generating...';
+      startGenStatus(resumeSteps);
 
       try {
         var resp = await fetch('/api/jobs/' + currentJobId + '/generate-resume', { method: 'POST' });
-        var data = await resp.json();
-
-        if (data.error) throw new Error(data.error);
+        var data = await parseResponse(resp);
 
         document.getElementById('resumeContent').textContent = data.markdown;
         document.getElementById('resumeOutput').classList.add('visible');
         btn.innerHTML = 'Regenerate Resume';
         btn.disabled = false;
+        showApplyButton();
+        stopGenStatus('Resume ready — downloading .docx');
+        triggerDownload('resume', 'docx');
 
         if (window.refreshTopbarCredits) refreshTopbarCredits();
       } catch (err) {
-        btn.innerHTML = 'Error: ' + err.message;
+        stopGenStatus('Error: ' + err.message, true);
+        btn.innerHTML = 'Error — retry?';
         btn.disabled = false;
-        setTimeout(function() { btn.innerHTML = 'Generate Resume'; }, 3000);
+        setTimeout(function() { btn.innerHTML = 'Generate Resume'; }, 5000);
       }
     }
 
@@ -1178,23 +1406,101 @@
       var btn = document.getElementById('btnGenCover');
       btn.disabled = true;
       btn.innerHTML = '<span class="spinner"></span> Generating...';
+      startGenStatus(coverSteps);
 
       try {
         var resp = await fetch('/api/jobs/' + currentJobId + '/generate-cover-letter', { method: 'POST' });
-        var data = await resp.json();
-
-        if (data.error) throw new Error(data.error);
+        var data = await parseResponse(resp);
 
         document.getElementById('coverContent').textContent = data.markdown;
         document.getElementById('coverOutput').classList.add('visible');
         btn.innerHTML = 'Regenerate Cover Letter';
         btn.disabled = false;
+        showApplyButton();
+        stopGenStatus('Cover letter ready — downloading .docx');
+        triggerDownload('cover', 'docx');
 
         if (window.refreshTopbarCredits) refreshTopbarCredits();
       } catch (err) {
-        btn.innerHTML = 'Error: ' + err.message;
+        stopGenStatus('Error: ' + err.message, true);
+        btn.innerHTML = 'Error — retry?';
         btn.disabled = false;
-        setTimeout(function() { btn.innerHTML = 'Generate Cover Letter'; }, 3000);
+        setTimeout(function() { btn.innerHTML = 'Generate Cover Letter'; }, 5000);
+      }
+    }
+
+    /* ── Generate Both (parallel) ─────────────────────── */
+    async function generateBoth() {
+      if (!currentJobId) return;
+      var btnBoth = document.getElementById('btnGenBoth');
+      var btnResume = document.getElementById('btnGenResume');
+      var btnCover = document.getElementById('btnGenCover');
+
+      btnBoth.disabled = true;
+      btnBoth.innerHTML = '<span class="spinner"></span> Generating Both...';
+      btnResume.disabled = true;
+      btnResume.innerHTML = '<span class="spinner"></span> Generating...';
+      btnCover.disabled = true;
+      btnCover.innerHTML = '<span class="spinner"></span> Generating...';
+      startGenStatus(bothSteps);
+
+      var resumeOk = false;
+      var coverOk = false;
+
+      try {
+        var [resumeResp, coverResp] = await Promise.all([
+          fetch('/api/jobs/' + currentJobId + '/generate-resume', { method: 'POST' }),
+          fetch('/api/jobs/' + currentJobId + '/generate-cover-letter', { method: 'POST' })
+        ]);
+
+        var resumeData, coverData;
+        try { resumeData = await parseResponse(resumeResp); } catch(e) { resumeData = {error: e.message}; }
+        try { coverData = await parseResponse(coverResp); } catch(e) { coverData = {error: e.message}; }
+
+        if (!resumeData.error) {
+          document.getElementById('resumeContent').textContent = resumeData.markdown;
+          document.getElementById('resumeOutput').classList.add('visible');
+          btnResume.innerHTML = 'Regenerate Resume';
+          resumeOk = true;
+        } else {
+          btnResume.innerHTML = 'Resume failed — retry?';
+          setTimeout(function() { btnResume.innerHTML = 'Generate Resume'; }, 8000);
+        }
+
+        if (!coverData.error) {
+          document.getElementById('coverContent').textContent = coverData.markdown;
+          document.getElementById('coverOutput').classList.add('visible');
+          btnCover.innerHTML = 'Regenerate Cover Letter';
+          coverOk = true;
+        } else {
+          btnCover.innerHTML = 'Cover letter failed — retry?';
+          setTimeout(function() { btnCover.innerHTML = 'Generate Cover Letter'; }, 8000);
+        }
+
+        btnBoth.innerHTML = (resumeOk && coverOk) ? 'Regenerate Both' : 'Generate Both';
+        var errors = [];
+        if (resumeData.error) errors.push('Resume: ' + resumeData.error);
+        if (coverData.error) errors.push('Cover: ' + coverData.error);
+        if (errors.length) stopGenStatus(errors.join(' | '), true);
+        btnResume.disabled = false;
+        btnCover.disabled = false;
+        btnBoth.disabled = false;
+
+        // Auto-download both .docx files
+        if (resumeOk) triggerDownload('resume', 'docx');
+        if (coverOk) setTimeout(function() { triggerDownload('cover', 'docx'); }, 500);
+
+        var msg = (resumeOk && coverOk) ? 'Both documents ready — downloading' : 'Generation complete';
+        stopGenStatus(msg);
+        if (resumeOk || coverOk) showApplyButton();
+        if (window.refreshTopbarCredits) refreshTopbarCredits();
+
+      } catch (err) {
+        stopGenStatus('Error: ' + err.message, true);
+        btnBoth.innerHTML = 'Error — retry?';
+        btnResume.disabled = false;
+        btnCover.disabled = false;
+        setTimeout(function() { btnBoth.innerHTML = 'Generate Both'; btnBoth.disabled = false; }, 5000);
       }
     }
 
@@ -1202,7 +1508,18 @@
     function downloadDoc(docType, format) {
       if (!currentJobId) return;
       event.preventDefault();
-      window.open('/api/jobs/' + currentJobId + '/download/' + docType + '?format=' + format, '_blank');
+      triggerDownload(docType, format);
+    }
+
+    /* ── Trigger a file download via hidden iframe ────── */
+    function triggerDownload(docType, format) {
+      if (!currentJobId) return;
+      var url = '/api/jobs/' + currentJobId + '/download/' + docType + '?format=' + format;
+      var iframe = document.createElement('iframe');
+      iframe.style.display = 'none';
+      iframe.src = url;
+      document.body.appendChild(iframe);
+      setTimeout(function() { iframe.remove(); }, 10000);
     }
 
     /* ── Copy Generated Content ────────────────────────── */

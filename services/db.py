@@ -239,11 +239,48 @@ def update_job(conn: sqlite3.Connection, job_id: int, data: dict) -> bool:
     return True
 
 
+def _normalize_url(url: str) -> str:
+    """Strip tracking/session params from a URL for dedup comparison."""
+    from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
+    try:
+        parsed = urlparse(url)
+        params = parse_qs(parsed.query, keep_blank_values=False)
+        # Remove common tracking params
+        noise = {"utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content",
+                 "from", "fromage", "vjk", "advn", "tk", "jsa", "ref", "src",
+                 "attributionid", "pcl", "rcChannel", "start"}
+        cleaned = {k: v for k, v in params.items() if k.lower() not in noise}
+        new_query = urlencode(cleaned, doseq=True)
+        return urlunparse(parsed._replace(query=new_query, fragment=""))
+    except Exception:
+        return url
+
+
 def upsert_job(conn: sqlite3.Connection, job_data: dict) -> int:
-    """Insert a job, or skip if URL already exists. Returns job ID or -1 if skipped."""
-    if job_data.get("url"):
+    """Insert a job, or skip if it's a duplicate. Returns job ID or -1 if skipped.
+
+    Dedup strategy:
+    1. Exact URL match (after stripping tracking params)
+    2. Same title + company (normalized) — catches cross-board and cross-run dupes
+    """
+    url = job_data.get("url", "")
+    title = (job_data.get("title") or "").strip()
+    company = (job_data.get("company") or "").strip()
+
+    # Check 1: URL match (normalized)
+    if url:
+        norm_url = _normalize_url(url)
         existing = conn.execute(
-            "SELECT id FROM jobs WHERE url = ?", (job_data["url"],)
+            "SELECT id FROM jobs WHERE url = ? OR url = ?", (url, norm_url)
+        ).fetchone()
+        if existing:
+            return -1
+
+    # Check 2: Title + company match (case-insensitive, trimmed)
+    if title and company:
+        existing = conn.execute(
+            "SELECT id FROM jobs WHERE LOWER(TRIM(title)) = LOWER(?) AND LOWER(TRIM(company)) = LOWER(?)",
+            (title, company)
         ).fetchone()
         if existing:
             return -1

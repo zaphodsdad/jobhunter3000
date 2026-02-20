@@ -319,6 +319,16 @@ def generate_resume(job: dict, settings: dict = None) -> dict:
         f"Description:\n{(job.get('description', '') or '')[:4000]}"
     )
 
+    # Build work history timeline for the prompt
+    work_timeline = ""
+    for wh in profile.get("work_history", []):
+        start = wh.get("start_year", "")
+        end = wh.get("end_year", "")
+        date_range = f"{start}-{end}" if start else wh.get("duration", "")
+        location = wh.get("location", "")
+        loc_str = f" ({location})" if location else ""
+        work_timeline += f"- {wh['title']} @ {wh['company']}{loc_str} [{date_range}]\n"
+
     prompt = f"""You are an expert resume writer. Create a tailored resume for this specific job posting.
 
 CANDIDATE PROFILE:
@@ -328,6 +338,9 @@ Experience: {profile.get('experience_years', 0)}+ years
 Core Strengths: {', '.join(profile.get('core_strengths', []))}
 Key Skills: {', '.join(profile.get('all_skills', [])[:25])}
 Unique Value: {profile.get('unique_value', '')}
+
+WORK TIMELINE (include dates on resume — do NOT omit any current positions):
+{work_timeline}
 
 SOURCE RESUME (use this as the base — reorder, emphasize, and tailor):
 {resume_text[:5000]}
@@ -363,7 +376,10 @@ Output the resume in clean markdown. No commentary before or after — just the 
     docx_path = os.path.join(GENERATED_DIR, f"{job['id']}_resume.docx")
     pdf_path = os.path.join(GENERATED_DIR, f"{job['id']}_resume.pdf")
     _md_to_docx(result, docx_path, doc_type="resume")
-    _md_to_pdf(result, pdf_path)
+    try:
+        _md_to_pdf(result, pdf_path)
+    except Exception:
+        pass  # PDF is optional — Unicode font issues shouldn't block generation
 
     # Update job record (store base path without extension)
     base_path = os.path.join(GENERATED_DIR, f"{job['id']}_resume")
@@ -408,7 +424,12 @@ def generate_cover_letter(job: dict, settings: dict = None) -> dict:
     work_history = ""
     for wh in profile.get("work_history", [])[:5]:
         highlights = "; ".join(wh.get("highlights", [])[:2])
-        work_history += f"- {wh['title']} @ {wh['company']} ({wh['duration']}): {highlights}\n"
+        start = wh.get("start_year", "")
+        end = wh.get("end_year", "")
+        date_range = f"{start}-{end}" if start else wh.get("duration", "")
+        location = wh.get("location", "")
+        loc_str = f", {location}" if location else ""
+        work_history += f"- {wh['title']} @ {wh['company']}{loc_str} ({date_range}): {highlights}\n"
 
     prompt = f"""You are an expert career coach and cover letter writer. Write a professional, compelling cover letter for this specific job.
 
@@ -456,7 +477,10 @@ Output only the cover letter. No commentary before or after."""
     docx_path = os.path.join(GENERATED_DIR, f"{job['id']}_cover.docx")
     pdf_path = os.path.join(GENERATED_DIR, f"{job['id']}_cover.pdf")
     _md_to_docx(result, docx_path, doc_type="cover")
-    _md_to_pdf(result, pdf_path)
+    try:
+        _md_to_pdf(result, pdf_path)
+    except Exception:
+        pass  # PDF is optional — Unicode font issues shouldn't block generation
 
     # Update job record (store base path without extension)
     base_path = os.path.join(GENERATED_DIR, f"{job['id']}_cover")

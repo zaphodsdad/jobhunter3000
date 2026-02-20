@@ -91,4 +91,4 @@ jobhunter3000/
 
 ## License
 
-MIT
+AGPL-3.0 — See [LICENSE](LICENSE) for full text.

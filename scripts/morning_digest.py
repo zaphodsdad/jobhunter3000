@@ -26,8 +26,8 @@ from services.settings import load_settings
 
 # ── Config ────────────────────────────────────────────────
 # Override via environment variables or edit here for your setup
-EMAIL_TO = os.environ.get("JH3000_EMAIL_TO", "user@example.com")
-EMAIL_FROM = os.environ.get("JH3000_EMAIL_FROM", "burxja@gmail.com")
+EMAIL_TO = os.environ.get("JH3000_EMAIL_TO", "")
+EMAIL_FROM = os.environ.get("JH3000_EMAIL_FROM", "")
 LOG_FILE = "/root/jobhunter3000/logs/morning-digest.log"
 APP_URL = os.environ.get("JH3000_APP_URL", "http://localhost:8001")
 

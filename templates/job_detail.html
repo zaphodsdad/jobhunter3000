@@ -496,7 +496,12 @@
         <div class="job-header-meta">
           {{ job.company or 'Unknown' }}
           {% if job.location %} &middot; {{ job.location }}{% endif %}
-          {% if job.salary_text %} &middot; {{ job.salary_text }}{% endif %}
+          {% if job.salary_text %} &middot; {{ job.salary_text }}{% elif job.salary_estimate %} &middot; <span style="color:#fbbf24;" title="AI-estimated salary range">{{ job.salary_estimate }} <span style="font-size:0.65rem;opacity:0.7;">(est.)</span></span>{% endif %}
+          {% if job.ghost_risk == 'high' %}
+            <span style="display:inline-block;padding:0.1rem 0.5rem;border-radius:4px;font-size:0.7rem;font-weight:600;background:rgba(239,68,68,0.15);color:#f87171;margin-left:8px;" title="Vague listing with few specifics — may be a ghost job">Ghost Risk: High</span>
+          {% elif job.ghost_risk == 'medium' %}
+            <span style="display:inline-block;padding:0.1rem 0.5rem;border-radius:4px;font-size:0.7rem;font-weight:600;background:rgba(245,158,11,0.12);color:#fbbf24;margin-left:8px;" title="Some vague elements in this listing">Ghost Risk: Medium</span>
+          {% endif %}
         </div>
       </div>
     </div>
@@ -515,6 +520,14 @@
       </div>
       {% endif %}
     </div>
+
+    <!-- AI Summary -->
+    {% if job.summary %}
+    <div class="detail-section">
+      <h3>AI Summary</h3>
+      <p style="font-size:0.9rem;color:#cbd5e1;line-height:1.6;">{{ job.summary }}</p>
+    </div>
+    {% endif %}
 
     <!-- Fit Summary -->
     {% if job.fit_summary %}
@@ -543,6 +556,43 @@
           {% endfor %}
           {% if not cons %}<li style="color:#6b7280">None</li>{% endif %}
         </ul>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Keyword Match -->
+    {% if keyword_match %}
+    <div class="detail-section">
+      <h3>ATS Keyword Match — {{ keyword_pct }}%</h3>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px;">
+        {% for kw in keyword_match %}
+        <span style="display:inline-block;padding:0.2rem 0.55rem;border-radius:4px;font-size:0.78rem;font-weight:500;
+          {% if kw.matched %}background:rgba(16,185,129,0.12);color:#34d399;border:1px solid rgba(16,185,129,0.25);
+          {% else %}background:rgba(239,68,68,0.1);color:#f87171;border:1px solid rgba(239,68,68,0.2);{% endif %}"
+          title="{{ kw.category | default('skill') }}">
+          {% if kw.matched %}&#10003;{% else %}&#10007;{% endif %} {{ kw.keyword }}
+        </span>
+        {% endfor %}
+      </div>
+      <div style="margin-top:6px;font-size:0.75rem;color:#6b7280;">
+        {{ keyword_match | selectattr('matched') | list | length }} of {{ keyword_match | length }} keywords matched
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Gap Analysis -->
+    {% if gaps %}
+    <div class="detail-section">
+      <h3>Gap Analysis</h3>
+      <div style="margin-top:4px;">
+        {% for g in gaps %}
+        <div style="padding:0.5rem 0;border-bottom:1px solid #1a1f2e;{% if loop.last %}border-bottom:none;{% endif %}">
+          <div style="font-size:0.85rem;color:#f87171;">&#9888; {{ g.gap }}</div>
+          {% if g.transferable %}
+          <div style="font-size:0.8rem;color:#34d399;margin-top:2px;">&#8627; You have: {{ g.transferable }}</div>
+          {% endif %}
+        </div>
+        {% endfor %}
       </div>
     </div>
     {% endif %}
@@ -637,6 +687,73 @@
         </a>
       </div>
       {% endif %}
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════
+         INTERVIEW PREP
+         ═══════════════════════════════════════════════════ -->
+    <div class="detail-section">
+      <h3>Interview Preparation</h3>
+      <button class="btn-gen btn-gen-both" id="btnPrep" onclick="generatePrep()" style="margin-bottom:10px;">
+        {% if interview_prep %}Regenerate Prep{% else %}Generate Interview Prep{% endif %}
+      </button>
+      <span class="gen-status" id="prepStatus"></span>
+
+      <div id="prepOutput" {% if not interview_prep %}style="display:none;"{% endif %}>
+        {% if interview_prep %}
+        <!-- Behavioral -->
+        {% if interview_prep.behavioral %}
+        <div style="margin-top:12px;">
+          <h4 style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.06em;color:#6b7280;margin:0 0 8px;">Behavioral Questions</h4>
+          {% for q in interview_prep.behavioral %}
+          <div style="padding:0.5rem 0;border-bottom:1px solid #1a1f2e;">
+            <div style="font-size:0.88rem;color:#e2e8f0;font-weight:500;">{{ q.question }}</div>
+            <div style="font-size:0.82rem;color:#34d399;margin-top:2px;">&#8627; {{ q.talking_point }}</div>
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- Technical -->
+        {% if interview_prep.technical %}
+        <div style="margin-top:16px;">
+          <h4 style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.06em;color:#6b7280;margin:0 0 8px;">Technical / Role-Specific Questions</h4>
+          {% for q in interview_prep.technical %}
+          <div style="padding:0.5rem 0;border-bottom:1px solid #1a1f2e;">
+            <div style="font-size:0.88rem;color:#e2e8f0;font-weight:500;">{{ q.question }}</div>
+            <div style="font-size:0.82rem;color:#00e5ff;margin-top:2px;">&#8627; {{ q.suggested_answer }}</div>
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- Situational -->
+        {% if interview_prep.situational %}
+        <div style="margin-top:16px;">
+          <h4 style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.06em;color:#6b7280;margin:0 0 8px;">Situational (STAR Method)</h4>
+          {% for q in interview_prep.situational %}
+          <div style="padding:0.5rem 0;border-bottom:1px solid #1a1f2e;">
+            <div style="font-size:0.88rem;color:#e2e8f0;font-weight:500;">{{ q.question }}</div>
+            <div style="font-size:0.82rem;color:#fbbf24;margin-top:2px;white-space:pre-wrap;">&#8627; {{ q.star_outline }}</div>
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- Questions to Ask -->
+        {% if interview_prep.questions_to_ask %}
+        <div style="margin-top:16px;">
+          <h4 style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.06em;color:#6b7280;margin:0 0 8px;">Questions to Ask the Interviewer</h4>
+          {% for q in interview_prep.questions_to_ask %}
+          <div style="padding:0.5rem 0;border-bottom:1px solid #1a1f2e;">
+            <div style="font-size:0.88rem;color:#c084fc;font-weight:500;">{{ q.question }}</div>
+            <div style="font-size:0.78rem;color:#6b7280;margin-top:2px;">{{ q.why }}</div>
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+        {% endif %}
+      </div>
     </div>
 
     <!-- Notes -->
@@ -890,6 +1007,43 @@
         btn.style.color = '#34d399';
         setTimeout(function() { btn.textContent = orig; btn.style.color = ''; }, 1500);
       });
+    }
+
+    /* ── Interview Prep ─────────────────────────────────── */
+    var prepSteps = ['Analyzing job requirements...', 'Reviewing your experience...', 'Crafting behavioral questions...', 'Generating technical questions...', 'Building STAR outlines...', 'Writing interviewer questions...'];
+
+    async function generatePrep() {
+      var btn = document.getElementById('btnPrep');
+      var statusEl = document.getElementById('prepStatus');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span> Generating...';
+      var idx = 0;
+      statusEl.textContent = prepSteps[0];
+      statusEl.classList.add('active');
+      var timer = setInterval(function() {
+        idx++;
+        if (idx < prepSteps.length) statusEl.textContent = prepSteps[idx];
+      }, 3500);
+
+      try {
+        var resp = await fetch('/api/jobs/' + JOB_ID + '/interview-prep', { method: 'POST' });
+        var data = await parseResponse(resp);
+        clearInterval(timer);
+        statusEl.textContent = 'Prep ready!';
+        statusEl.style.color = '#34d399';
+        setTimeout(function() { statusEl.textContent = ''; statusEl.style.color = ''; statusEl.classList.remove('active'); }, 3000);
+        btn.innerHTML = 'Regenerate Prep';
+        btn.disabled = false;
+        // Reload to show the prep content
+        window.location.reload();
+      } catch (err) {
+        clearInterval(timer);
+        statusEl.textContent = 'Error: ' + err.message;
+        statusEl.style.color = '#f87171';
+        statusEl.classList.remove('active');
+        btn.innerHTML = 'Generate Interview Prep';
+        btn.disabled = false;
+      }
     }
 
     /* ── Revise Document ───────────────────────────────── */

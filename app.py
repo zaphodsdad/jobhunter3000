@@ -16,6 +16,7 @@ from services.settings import load_settings, save_settings
 from services.db import (
     get_db, ensure_tables, get_dashboard_stats, get_jobs, get_job,
     update_job_status, update_job, get_sources, get_statuses,
+    get_search_queries, get_followups_due,
 )
 
 app = FastAPI(title="JobHunter3000")
@@ -49,12 +50,17 @@ async def root(request: Request):
 
 @app.get("/dashboard", response_class=HTMLResponse)
 async def dashboard(request: Request):
+    from services.resumes import validate_candidate_profile
     conn = get_db()
     stats = get_dashboard_stats(conn)
+    followups = get_followups_due(conn)
     conn.close()
+    profile_warnings = validate_candidate_profile()
     return templates.TemplateResponse("dashboard.html", {
         "request": request,
         "stats": stats,
+        "followups": followups,
+        "profile_warnings": profile_warnings,
     })
 
 
@@ -64,7 +70,9 @@ async def jobs_page(request: Request,
                     source: Optional[str] = None,
                     sort: Optional[str] = "score",
                     order: Optional[str] = "desc",
-                    min_score: Optional[int] = None):
+                    min_score: Optional[int] = None,
+                    search_query: Optional[str] = None,
+                    freshness: Optional[int] = None):
     settings = load_settings()
 
     # Use settings default if no override in URL
@@ -73,9 +81,11 @@ async def jobs_page(request: Request,
 
     conn = get_db()
     jobs = get_jobs(conn, status=status, source=source, sort=sort, order=order,
-                    limit=500, min_score=min_score)
+                    limit=500, min_score=min_score, search_query=search_query,
+                    max_age_hours=freshness)
     statuses = get_statuses(conn)
     sources = get_sources(conn)
+    search_queries = get_search_queries(conn)
     conn.close()
 
     # Parse JSON fields for template rendering
@@ -93,11 +103,14 @@ async def jobs_page(request: Request,
         "jobs": jobs,
         "statuses": statuses,
         "sources": sources,
+        "search_queries": search_queries,
         "current_status": status or "",
         "current_source": source or "",
         "current_sort": sort,
         "current_order": order,
         "current_min_score": min_score,
+        "current_search_query": search_query or "",
+        "current_freshness": freshness or 0,
     })
 
 
@@ -138,11 +151,50 @@ async def job_detail_page(request: Request, job_id: int):
                     else:
                         cover_markdown = f.read()
 
+    # Parse keyword_match and score_details for gap analysis
+    keyword_match = []
+    gaps = []
+    for field_name, target_list in [("keyword_match", keyword_match)]:
+        val = job.get(field_name)
+        if isinstance(val, str):
+            try:
+                target_list.extend(json.loads(val))
+            except (json.JSONDecodeError, TypeError):
+                pass
+        elif isinstance(val, list):
+            target_list.extend(val)
+    # Gaps come from score_details JSON
+    score_details = job.get("score_details")
+    if isinstance(score_details, str):
+        try:
+            sd = json.loads(score_details)
+            gaps = sd.get("gaps", [])
+        except (json.JSONDecodeError, TypeError):
+            pass
+
+    # Compute keyword match percentage
+    matched_count = sum(1 for k in keyword_match if k.get("matched"))
+    keyword_total = len(keyword_match)
+    keyword_pct = round(matched_count / keyword_total * 100) if keyword_total > 0 else 0
+
+    # Parse interview prep
+    interview_prep = None
+    ip_raw = job.get("interview_prep")
+    if isinstance(ip_raw, str):
+        try:
+            interview_prep = json.loads(ip_raw)
+        except (json.JSONDecodeError, TypeError):
+            pass
+
     return templates.TemplateResponse("job_detail.html", {
         "request": request,
         "job": job,
         "pros": pros,
         "cons": cons,
+        "keyword_match": keyword_match,
+        "keyword_pct": keyword_pct,
+        "gaps": gaps,
+        "interview_prep": interview_prep,
         "resume_markdown": resume_markdown,
         "cover_markdown": cover_markdown,
     })
@@ -177,6 +229,73 @@ async def pipeline_page(request: Request):
         "request": request,
         "pipeline": pipeline,
         "rejected": rejected,
+    })
+
+
+@app.get("/analytics", response_class=HTMLResponse)
+async def analytics_page(request: Request):
+    conn = get_db()
+
+    # Applications per week (last 8 weeks)
+    weekly_apps = conn.execute(
+        """SELECT strftime('%Y-W%W', applied_date) as week, COUNT(*) as cnt
+           FROM jobs WHERE applied_date IS NOT NULL
+           GROUP BY week ORDER BY week DESC LIMIT 8"""
+    ).fetchall()
+    weekly_apps = [dict(r) for r in reversed(weekly_apps)]
+
+    # Stage conversion funnel
+    funnel = {}
+    for status in ['new', 'interested', 'applied', 'interviewing', 'offer', 'accepted']:
+        row = conn.execute("SELECT COUNT(*) as cnt FROM jobs WHERE status = ?", (status,)).fetchone()
+        funnel[status] = row["cnt"]
+
+    # Score distribution
+    score_dist = {}
+    for label, lo, hi in [("0-19", 0, 19), ("20-39", 20, 39), ("40-59", 40, 59), ("60-79", 60, 79), ("80-100", 80, 100)]:
+        cnt = conn.execute(
+            "SELECT COUNT(*) as cnt FROM jobs WHERE score >= ? AND score <= ?", (lo, hi)
+        ).fetchone()["cnt"]
+        score_dist[label] = cnt
+
+    # Source effectiveness
+    source_stats = conn.execute(
+        """SELECT source,
+                  COUNT(*) as total,
+                  SUM(CASE WHEN status IN ('applied','interviewing','offer','accepted') THEN 1 ELSE 0 END) as applied,
+                  SUM(CASE WHEN status IN ('interviewing','offer','accepted') THEN 1 ELSE 0 END) as interviews,
+                  ROUND(AVG(score), 1) as avg_score
+           FROM jobs WHERE source IS NOT NULL
+           GROUP BY source ORDER BY total DESC"""
+    ).fetchall()
+    source_stats = [dict(r) for r in source_stats]
+
+    # Response rate
+    total_applied = conn.execute(
+        "SELECT COUNT(*) as cnt FROM jobs WHERE status IN ('applied','interviewing','offer','accepted')"
+    ).fetchone()["cnt"]
+    total_responses = conn.execute(
+        "SELECT COUNT(*) as cnt FROM jobs WHERE status IN ('interviewing','offer','accepted')"
+    ).fetchone()["cnt"]
+    response_rate = round(total_responses / total_applied * 100, 1) if total_applied > 0 else 0
+
+    # Total stats
+    total_jobs = conn.execute("SELECT COUNT(*) as cnt FROM jobs").fetchone()["cnt"]
+    avg_score = conn.execute("SELECT ROUND(AVG(score),1) as avg FROM jobs WHERE score IS NOT NULL").fetchone()["avg"] or 0
+
+    conn.close()
+
+    return templates.TemplateResponse("analytics.html", {
+        "request": request,
+        "weekly_apps": weekly_apps,
+        "funnel": funnel,
+        "score_dist": score_dist,
+        "source_stats": source_stats,
+        "response_rate": response_rate,
+        "total_applied": total_applied,
+        "total_responses": total_responses,
+        "total_jobs": total_jobs,
+        "avg_score": avg_score,
     })
 
 
@@ -265,11 +384,12 @@ async def save_settings_route(request: Request):
     form = await request.form()
     data = dict(form)
 
-    # Handle exclude_keywords textarea -> list
-    if "exclude_keywords" in data:
-        kw = data["exclude_keywords"]
-        if isinstance(kw, str):
-            data["exclude_keywords"] = [k.strip() for k in kw.split("\n") if k.strip()]
+    # Handle textarea -> list fields
+    for textarea_field in ("exclude_keywords", "exclude_companies", "exclude_title_keywords"):
+        if textarea_field in data:
+            val = data[textarea_field]
+            if isinstance(val, str):
+                data[textarea_field] = [k.strip() for k in val.split("\n") if k.strip()]
 
     # Handle enabled_boards checkboxes (multi-value)
     boards = form.getlist("enabled_boards")
@@ -899,6 +1019,63 @@ async def api_add_manual_job(request: Request):
             result["score_error"] = str(e)
 
     return JSONResponse(result)
+
+
+@app.post("/api/scraper/search")
+async def api_custom_search(request: Request):
+    """Run an ad-hoc search for a specific query/location (Quick Search)."""
+    import asyncio
+    from services.scraper import run_custom_search
+
+    body = await request.json()
+    query = (body.get("query") or "").strip()
+    location = (body.get("location") or "").strip()
+
+    if not query:
+        return JSONResponse({"error": "query is required"}, status_code=400)
+
+    settings = load_settings()
+
+    loop = asyncio.get_event_loop()
+    results = await loop.run_in_executor(None, run_custom_search, query, location, settings)
+    return JSONResponse(results)
+
+
+@app.post("/api/jobs/{job_id}/interview-prep")
+async def api_interview_prep(job_id: int):
+    """Generate interview preparation questions for a job."""
+    import asyncio
+    from services.scorer import generate_interview_prep
+
+    conn = get_db()
+    job = get_job(conn, job_id)
+    conn.close()
+    if not job:
+        return JSONResponse({"error": "Job not found"}, status_code=404)
+
+    settings = load_settings()
+
+    def _gen():
+        result = generate_interview_prep(job, settings)
+        if not result.get("error"):
+            # Store in DB
+            store_conn = get_db()
+            store_conn.execute(
+                "UPDATE jobs SET interview_prep = ?, updated_at = datetime('now') WHERE id = ?",
+                (json.dumps(result), job_id),
+            )
+            store_conn.commit()
+            store_conn.close()
+        return result
+
+    try:
+        loop = asyncio.get_event_loop()
+        result = await loop.run_in_executor(None, _gen)
+        if result.get("error"):
+            return JSONResponse(result, status_code=400)
+        return JSONResponse(result)
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
 
 
 @app.post("/api/scraper/suggest")

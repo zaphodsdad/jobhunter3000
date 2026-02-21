@@ -110,8 +110,20 @@ CRITICAL RULES (override the scale above):
 - Only score above 60 if the candidate could genuinely perform this job with their actual experience.
 - Be skeptical. When in doubt, score lower. A false positive wastes the candidate's time.
 
+ALSO PROVIDE:
+- "summary": A 2-sentence summary of the role (what the job actually is and what you'd be doing). Write for a job seeker scanning 50 listings — be specific, not generic.
+- "ghost_risk": Assess if this might be a ghost/fake job. Return "low", "medium", or "high".
+  - "high": Very vague description (no specific skills/tools/responsibilities listed), generic corporate boilerplate, no salary info AND no specific team/department mentioned
+  - "medium": Some vague elements but has at least some concrete requirements
+  - "low": Specific requirements, tools, team, responsibilities clearly listed
+- "keyword_match": Extract the top 10-12 most important required skills/tools/qualifications from the JD. For each, check if the candidate's resume/profile contains a match. Return as array of objects:
+  [{{"keyword": "skill name", "category": "hard_skill"|"soft_skill"|"tool"|"certification", "matched": true|false}}]
+- "gaps": List 3-5 specific gaps between the candidate and this role. For each, note if they have a transferable skill that partially covers it:
+  [{{"gap": "what they need", "transferable": "what you have that partially covers it (or empty string if nothing)"}}, ...]
+- "salary_estimate": If the job posting does NOT list a specific salary/range, estimate the likely annual salary range based on the job title, location, company, and industry. Return as a string like "$65,000 - $85,000" or null if salary IS listed in the posting.
+
 Return ONLY valid JSON (no markdown fences):
-{{"score": 0, "pros": ["pro 1", "pro 2", "pro 3"], "cons": ["con 1", "con 2"], "fit_summary": "One sentence explaining the fit."}}"""
+{{"score": 0, "pros": ["pro 1", "pro 2", "pro 3"], "cons": ["con 1", "con 2"], "fit_summary": "One sentence.", "summary": "Two sentences.", "ghost_risk": "low", "keyword_match": [{{"keyword": "Project Management", "category": "hard_skill", "matched": true}}], "gaps": [{{"gap": "PMP certification", "transferable": "20 years of project coordination experience"}}], "salary_estimate": "$65,000 - $85,000"}}"""
 
     # Use the scoring-specific model (cheaper/faster than the analysis model)
     score_settings = _scoring_settings(settings)
@@ -171,7 +183,8 @@ def score_jobs(conn, settings: dict = None, job_ids: list = None, force: bool = 
             score_data = score_job(job, settings, profile)
             conn.execute(
                 """UPDATE jobs SET score = ?, pros = ?, cons = ?, fit_summary = ?,
-                   score_details = ?, updated_at = datetime('now')
+                   score_details = ?, summary = ?, ghost_risk = ?, keyword_match = ?,
+                   salary_estimate = ?, updated_at = datetime('now')
                    WHERE id = ?""",
                 (
                     score_data["score"],
@@ -179,6 +192,10 @@ def score_jobs(conn, settings: dict = None, job_ids: list = None, force: bool = 
                     json.dumps(score_data.get("cons", [])),
                     score_data.get("fit_summary", ""),
                     json.dumps(score_data),
+                    score_data.get("summary", ""),
+                    score_data.get("ghost_risk", ""),
+                    json.dumps(score_data.get("keyword_match", [])),
+                    score_data.get("salary_estimate"),
                     job["id"],
                 ),
             )
@@ -188,6 +205,75 @@ def score_jobs(conn, settings: dict = None, job_ids: list = None, force: bool = 
             results["errors"].append(f"Job {job['id']} ({job.get('title', '?')}): {str(e)}")
 
     return results
+
+
+def generate_interview_prep(job: dict, settings: dict = None, profile: dict = None) -> dict:
+    """Generate interview preparation questions and talking points for a job."""
+    if not settings:
+        settings = load_settings()
+    if not profile:
+        profile = load_candidate_profile()
+
+    if not profile:
+        return {"error": "No candidate profile. Analyze resumes first."}
+
+    job_info = (
+        f"Title: {job.get('title', 'Unknown')}\n"
+        f"Company: {job.get('company', 'Unknown')}\n"
+        f"Location: {job.get('location', 'Unknown')}\n"
+        f"Description:\n{(job.get('description', '') or '')[:3000]}"
+    )
+
+    prompt = f"""You are an expert interview coach. Generate interview preparation materials for this specific job.
+
+CANDIDATE:
+{profile.get('name', 'Unknown')} — {profile.get('headline', '')}
+{profile.get('experience_years', 0)}+ years experience
+Core Strengths: {', '.join(profile.get('core_strengths', []))}
+Skills: {', '.join(profile.get('all_skills', [])[:20])}
+
+Work History:
+{chr(10).join(f"- {j['title']} @ {j['company']} ({j['duration']})" for j in profile.get('work_history', [])[:5])}
+
+JOB:
+{job_info}
+
+Generate:
+1. 5 behavioral questions they're likely to ask (with a suggested talking point from the candidate's experience for each)
+2. 5 technical/role-specific questions (with suggested answers based on the candidate's background)
+3. 3 situational questions (with STAR-method response outlines)
+4. 5 smart questions the candidate should ASK the interviewer (including "What would be the most challenging aspect of this role for someone new?" — this technique scored huge engagement with hiring managers)
+
+Return ONLY valid JSON (no markdown fences):
+{{
+    "behavioral": [
+        {{"question": "...", "talking_point": "Draw on your experience with..."}}
+    ],
+    "technical": [
+        {{"question": "...", "suggested_answer": "..."}}
+    ],
+    "situational": [
+        {{"question": "...", "star_outline": "Situation: ... Task: ... Action: ... Result: ..."}}
+    ],
+    "questions_to_ask": [
+        {{"question": "...", "why": "Shows you're thinking about..."}}
+    ]
+}}"""
+
+    result = llm_chat(
+        [{"role": "user", "content": prompt}],
+        settings,
+    )
+
+    try:
+        cleaned = result.strip()
+        if cleaned.startswith("```"):
+            cleaned = cleaned.split("\n", 1)[1]
+            if cleaned.endswith("```"):
+                cleaned = cleaned.rsplit("```", 1)[0]
+        return json.loads(cleaned)
+    except json.JSONDecodeError:
+        return {"error": "Failed to parse interview prep", "raw": result[:500]}
 
 
 def suggest_searches(settings: dict = None, profile: dict = None) -> dict:

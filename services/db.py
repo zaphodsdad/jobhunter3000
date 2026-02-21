@@ -87,10 +87,28 @@ def get_db(db_path: str = None) -> sqlite3.Connection:
     return conn
 
 
+def _run_migrations(conn: sqlite3.Connection):
+    """Run all column migrations (idempotent)."""
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(jobs)").fetchall()}
+    migrations = {
+        "search_query": "ALTER TABLE jobs ADD COLUMN search_query TEXT",
+        "summary": "ALTER TABLE jobs ADD COLUMN summary TEXT",
+        "ghost_risk": "ALTER TABLE jobs ADD COLUMN ghost_risk TEXT",
+        "keyword_match": "ALTER TABLE jobs ADD COLUMN keyword_match TEXT",
+        "interview_prep": "ALTER TABLE jobs ADD COLUMN interview_prep TEXT",
+        "salary_estimate": "ALTER TABLE jobs ADD COLUMN salary_estimate TEXT",
+    }
+    for col, sql in migrations.items():
+        if col not in cols:
+            conn.execute(sql)
+    conn.commit()
+
+
 def ensure_tables(conn: sqlite3.Connection):
     """Create tables if they don't exist."""
     conn.executescript(SCHEMA)
     conn.commit()
+    _run_migrations(conn)
 
 
 def get_pipeline_counts(conn: sqlite3.Connection) -> dict:
@@ -149,7 +167,8 @@ def get_dashboard_stats(conn: sqlite3.Connection) -> dict:
 def get_jobs(conn: sqlite3.Connection, status: str = None, source: str = None,
              sort: str = "created_at", order: str = "desc",
              limit: int = 100, offset: int = 0,
-             min_score: int = None) -> list[dict]:
+             min_score: int = None, search_query: str = None,
+             max_age_hours: int = None) -> list[dict]:
     """Get paginated job list with optional filters."""
     where_parts = []
     params = []
@@ -166,6 +185,14 @@ def get_jobs(conn: sqlite3.Connection, status: str = None, source: str = None,
     if min_score is not None and min_score > 0:
         where_parts.append("(score >= ? OR score IS NULL)")
         params.append(min_score)
+    if search_query:
+        where_parts.append("search_query = ?")
+        params.append(search_query)
+    if max_age_hours is not None and max_age_hours > 0:
+        where_parts.append(
+            "COALESCE(posted_date, scraped_at, created_at) >= datetime('now', ?)"
+        )
+        params.append(f"-{max_age_hours} hours")
 
     where_clause = " AND ".join(where_parts) if where_parts else "1=1"
 
@@ -307,3 +334,25 @@ def get_statuses(conn: sqlite3.Connection) -> list[str]:
     """Get distinct job statuses."""
     rows = conn.execute("SELECT DISTINCT status FROM jobs ORDER BY status").fetchall()
     return [row["status"] for row in rows]
+
+
+def get_followups_due(conn: sqlite3.Connection) -> list[dict]:
+    """Get jobs with status 'applied' that are due for follow-up (7+ days since applied)."""
+    rows = conn.execute(
+        """SELECT id, title, company, applied_date, status,
+                  CAST(julianday('now') - julianday(applied_date) AS INTEGER) as days_since_applied
+           FROM jobs
+           WHERE status = 'applied'
+             AND applied_date IS NOT NULL
+             AND julianday('now') - julianday(applied_date) >= 7
+           ORDER BY applied_date ASC"""
+    ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def get_search_queries(conn: sqlite3.Connection) -> list[str]:
+    """Get distinct search_query values (for campaign filter dropdown)."""
+    rows = conn.execute(
+        "SELECT DISTINCT search_query FROM jobs WHERE search_query IS NOT NULL ORDER BY search_query"
+    ).fetchall()
+    return [row["search_query"] for row in rows]

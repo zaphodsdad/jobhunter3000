@@ -252,6 +252,27 @@ def load_candidate_profile() -> dict | None:
     return None
 
 
+def validate_candidate_profile(profile: dict = None) -> list[str]:
+    """Check candidate profile completeness. Returns list of warning strings (empty = valid)."""
+    if profile is None:
+        profile = load_candidate_profile()
+    if not profile:
+        return ["No candidate profile found. Upload a resume and analyze it on the Dossier page."]
+
+    warnings = []
+    if not profile.get("name"):
+        warnings.append("Profile is missing your name.")
+    if not profile.get("work_history"):
+        warnings.append("No work history found. Your resume may not have parsed correctly.")
+    if not profile.get("all_skills") and not profile.get("core_strengths"):
+        warnings.append("No skills listed. Re-analyze your resume or add skills manually on the Dossier page.")
+    if not profile.get("target_roles"):
+        warnings.append("No target roles set. Add target roles on the Dossier page for better scoring.")
+    if not profile.get("headline"):
+        warnings.append("No professional headline. Add one on the Dossier page.")
+    return warnings
+
+
 def save_candidate_profile(data: dict) -> None:
     """Save updated candidate profile to disk."""
     profile_path = os.path.join(

@@ -494,6 +494,18 @@
             {% endif %}
         </div>
 
+        <!-- ── Profile Warnings ─────────────────────────────── -->
+        {% if profile_warnings and profile_warnings | length > 0 %}
+        <div style="background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.25);border-left:3px solid #fbbf24;border-radius:8px;padding:1rem 1.25rem;margin-bottom:1.5rem;">
+            <div style="font-size:0.72rem;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:#fbbf24;margin-bottom:0.5rem;">Profile Incomplete</div>
+            <ul style="list-style:none;padding:0;margin:0;">
+                {% for w in profile_warnings %}
+                <li style="font-size:0.85rem;color:var(--text-secondary,#c9d1d9);padding:0.2rem 0;">&#9888; {{ w }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
         <!-- ── Stat Cards ──────────────────────────────────── -->
         <div class="stat-cards">
             <!-- Intel Gathered (Total) -->
@@ -591,6 +603,40 @@
                 </div>
             </div>
         </div>
+
+        <!-- ── Follow-ups Due ────────────────────────────────── -->
+        {% if followups and followups | length > 0 %}
+        <div class="pipeline-section">
+            <div class="pipeline-section__title">Follow-ups Due ({{ followups | length }})</div>
+            <div class="pipeline-bar-container">
+                <ul class="recent-list">
+                    {% for fu in followups[:5] %}
+                    <li class="recent-item">
+                        <span class="status-badge status-badge--applied" style="min-width:auto;font-size:0.65rem;padding:0.15rem 0.4rem;">
+                            {{ fu.days_since_applied }}d ago
+                        </span>
+                        <div class="recent-item__info">
+                            <div class="recent-item__title">
+                                <a href="/jobs/{{ fu.id }}">{{ fu.title }}</a>
+                            </div>
+                            <div class="recent-item__company">{{ fu.company | default('Unknown') }}</div>
+                        </div>
+                        <div class="recent-item__meta">
+                            <span style="font-size:0.72rem;color:{% if fu.days_since_applied >= 14 %}#f87171{% else %}#fbbf24{% endif %};">
+                                {% if fu.days_since_applied >= 14 %}2nd follow-up due{% else %}Follow up now{% endif %}
+                            </span>
+                        </div>
+                    </li>
+                    {% endfor %}
+                    {% if followups | length > 5 %}
+                    <li style="padding:0.5rem 0;font-size:0.75rem;color:var(--text-muted,#8b949e);text-align:center;">
+                        + {{ followups | length - 5 }} more &mdash; <a href="/jobs?status=applied" style="color:var(--cyan,#00e5ff);text-decoration:none;">View all</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+        {% endif %}
 
         <!-- ── Two-Column: Activity + Funnel ───────────────── -->
         <div class="two-col">

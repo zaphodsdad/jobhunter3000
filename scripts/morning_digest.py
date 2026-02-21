@@ -21,7 +21,7 @@ from email.mime.text import MIMEText
 # Add project root to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
-from services.db import get_db
+from services.db import get_db, get_followups_due
 from services.settings import load_settings
 
 # ── Config ────────────────────────────────────────────────
@@ -99,6 +99,17 @@ def get_digest_data():
     scored = conn.execute("SELECT COUNT(*) as cnt FROM jobs WHERE score IS NOT NULL").fetchone()["cnt"]
     avg_score = conn.execute("SELECT AVG(score) as avg FROM jobs WHERE score IS NOT NULL").fetchone()["avg"]
 
+    # Top 5 freshest high-scoring jobs to apply to today
+    top5_today = conn.execute(
+        """SELECT * FROM jobs
+           WHERE score >= 60 AND status = 'new'
+           ORDER BY score DESC, created_at DESC LIMIT 5"""
+    ).fetchall()
+    top5_today = [dict(r) for r in top5_today]
+
+    # Follow-ups due
+    followups = get_followups_due(conn)
+
     conn.close()
 
     return {
@@ -106,6 +117,8 @@ def get_digest_data():
         "total_new_raw": total_new_raw,
         "score_tiers": score_tiers,
         "top_matches": top_matches,
+        "top5_today": top5_today,
+        "followups": followups,
         "pipeline": pipeline,
         "runs": runs,
         "awaiting_action": awaiting,
@@ -226,6 +239,64 @@ def build_email(data):
         </div>
     </div>
 """
+
+    # Top 5 to Apply To Today
+    top5 = data.get("top5_today", [])
+    if top5:
+        html += """
+    <!-- Top 5 Today -->
+    <div style="padding:16px 0; border-bottom:1px solid #2a2d3a;">
+        <h2 style="font-size:14px; color:#4ade80; text-transform:uppercase; letter-spacing:1px; margin:0 0 12px;">
+            <span style="color:#22d3ee;">//</span> Top 5 to Apply To Today
+        </h2>
+        <p style="font-size:12px; color:#666; margin:0 0 10px;">These are your highest-scoring fresh jobs. Apply to these first.</p>
+"""
+        for i, job in enumerate(top5, 1):
+            score = job.get("score", 0)
+            fit = job.get("fit_summary", "")
+            url = job.get("url", "")
+            html += f"""
+        <div style="background:#1a1d27; border:1px solid #2a2d3a; border-radius:8px; padding:12px; margin-bottom:6px;">
+            <div style="display:flex; align-items:center; gap:10px;">
+                <span style="display:inline-block; padding:3px 10px; font-size:14px; font-weight:700;
+                             border-radius:6px; background:{score_bg(score)}; color:{score_color(score)};">
+                    #{i} &middot; {score}
+                </span>
+                <div>
+                    <div style="font-size:14px; font-weight:600; color:#e0e0e0;">{job.get('title', 'Unknown')}</div>
+                    <div style="font-size:12px; color:#999;">{job.get('company', 'Unknown')} &middot; {job.get('location', '')}</div>
+                </div>
+            </div>
+            {f'<div style="font-size:12px; color:#999; margin-top:4px;">{fit}</div>' if fit else ''}
+            {f'<div style="margin-top:4px;"><a href="{url}" style="font-size:12px; color:#22d3ee;">View Posting</a> &middot; <a href="{APP_URL}/jobs/{job["id"]}" style="font-size:12px; color:#22d3ee;">Open in JH3000</a></div>' if url else ''}
+        </div>
+"""
+        html += "    </div>\n"
+
+    # Follow-ups Due
+    followups = data.get("followups", [])
+    if followups:
+        html += f"""
+    <!-- Follow-ups Due -->
+    <div style="padding:16px 0; border-bottom:1px solid #2a2d3a;">
+        <h2 style="font-size:14px; color:#fbbf24; text-transform:uppercase; letter-spacing:1px; margin:0 0 12px;">
+            <span style="color:#22d3ee;">//</span> Follow-ups Due ({len(followups)})
+        </h2>
+"""
+        for fu in followups[:5]:
+            days = fu.get("days_since_applied", 0)
+            urgency_color = "#f87171" if days >= 14 else "#fbbf24"
+            urgency_text = "2nd follow-up due" if days >= 14 else "Follow up now"
+            html += f"""
+        <div style="font-size:13px; color:#999; padding:6px 0; border-bottom:1px solid #1a1d27;">
+            <span style="color:{urgency_color}; font-weight:600;">{days}d</span>
+            &mdash; {fu.get('title', '?')} at {fu.get('company', '?')}
+            <span style="color:{urgency_color}; font-size:11px;"> ({urgency_text})</span>
+        </div>
+"""
+        if len(followups) > 5:
+            html += f'        <div style="font-size:11px; color:#666; padding:6px 0;">+ {len(followups) - 5} more</div>\n'
+        html += "    </div>\n"
 
     # Top Matches section
     if top_matches:

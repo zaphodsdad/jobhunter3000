@@ -1034,6 +1034,34 @@ BOARD_SCRAPERS = {
 }
 
 
+def _should_exclude(job: dict, settings: dict) -> str | None:
+    """Check if a job should be excluded based on anti-filters.
+
+    Returns the reason string if excluded, None if the job passes.
+    """
+    title = (job.get("title") or "").lower()
+    company = (job.get("company") or "").lower()
+    description = (job.get("description") or "").lower()
+
+    # Check excluded companies
+    for exc in settings.get("exclude_companies", []):
+        if exc and exc.lower() in company:
+            return f"excluded company: {exc}"
+
+    # Check excluded title keywords
+    for exc in settings.get("exclude_title_keywords", []):
+        if exc and exc.lower() in title:
+            return f"excluded title keyword: {exc}"
+
+    # Check excluded description keywords
+    text = f"{title} {description}"
+    for exc in settings.get("exclude_keywords", []):
+        if exc and exc.lower() in text:
+            return f"excluded keyword: {exc}"
+
+    return None
+
+
 def run_scrape_for_profile(profile: dict, enabled_boards: list = None) -> list[dict]:
     """Run scrapes across all boards for a single search profile."""
     boards = profile.get("boards", ["indeed"])
@@ -1088,10 +1116,21 @@ def run_full_scrape(settings: dict) -> dict:
             results["profiles_run"] += 1
             results["jobs_found"] += len(jobs)
 
+            # Stamp every job with the search campaign name, apply anti-filters
+            campaign_name = profile.get("name", profile.get("query", ""))
+            excluded = 0
             for job in jobs:
+                reason = _should_exclude(job, settings)
+                if reason:
+                    excluded += 1
+                    logger.debug(f"Excluded: {job.get('title', '?')} — {reason}")
+                    continue
+                job["search_query"] = campaign_name
                 new_id = upsert_job(conn, job)
                 if new_id > 0:
                     results["jobs_new"] += 1
+            if excluded:
+                logger.info(f"Anti-filters excluded {excluded} jobs from '{campaign_name}'")
 
         except Exception as e:
             error_msg = f"Profile '{profile.get('name', '?')}': {str(e)}"
@@ -1105,4 +1144,65 @@ def run_full_scrape(settings: dict) -> dict:
     conn.close()
     results["completed_at"] = datetime.now().isoformat()
 
+    return results
+
+
+def run_custom_search(query: str, location: str, settings: dict) -> dict:
+    """Run an ad-hoc search across enabled boards for a specific query.
+
+    Builds a temporary profile from the given query/location, scrapes,
+    stamps search_query, upserts, and scores. Returns summary dict.
+    """
+    from services.db import get_db, upsert_job
+
+    enabled_boards = settings.get("enabled_boards", ["indeed", "simplyhired"])
+    profile = {
+        "query": query,
+        "location": location or settings.get("default_location", ""),
+        "radius_miles": settings.get("default_radius_miles", 30),
+        "salary_min": settings.get("default_salary_min", 0),
+        "boards": enabled_boards,
+    }
+
+    results = {
+        "query": query,
+        "location": profile["location"],
+        "jobs_found": 0,
+        "jobs_new": 0,
+        "scored": 0,
+        "errors": [],
+        "started_at": datetime.now().isoformat(),
+    }
+
+    try:
+        jobs = run_scrape_for_profile(profile, enabled_boards)
+        results["jobs_found"] = len(jobs)
+    except Exception as e:
+        results["errors"].append(f"Scrape failed: {e}")
+        return results
+
+    conn = get_db()
+    excluded = 0
+    for job in jobs:
+        reason = _should_exclude(job, settings)
+        if reason:
+            excluded += 1
+            continue
+        job["search_query"] = query
+        new_id = upsert_job(conn, job)
+        if new_id > 0:
+            results["jobs_new"] += 1
+    if excluded:
+        results["excluded"] = excluded
+
+    # Auto-score new jobs
+    try:
+        from services.scorer import score_jobs
+        scored = score_jobs(conn, settings)
+        results["scored"] = scored.get("scored", 0)
+    except Exception as e:
+        results["errors"].append(f"Scoring failed: {e}")
+
+    conn.close()
+    results["completed_at"] = datetime.now().isoformat()
     return results

@@ -101,6 +101,8 @@ DEFAULTS = {
         "CISSP required",
         "PMP required",
     ],
+    "exclude_companies": [],             # Skip jobs from these companies entirely
+    "exclude_title_keywords": [],        # Skip jobs whose title contains these words
     "max_days_old": 14,
     # USAJobs API (free — register at developer.usajobs.gov)
     "usajobs_api_key": "",

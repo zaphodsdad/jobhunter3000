@@ -380,10 +380,22 @@
             <p class="section-desc">Keywords and age limits to automatically exclude irrelevant postings.</p>
 
             <div class="form-group">
-                <label for="exclude_keywords">Exclude Keywords (one per line)</label>
+                <label for="exclude_keywords">Exclude Keywords (one per line) — skips jobs whose title or description contains these</label>
                 <textarea id="exclude_keywords" name="exclude_keywords"
                           rows="5"
                           placeholder="security clearance required&#10;commission only&#10;CDL required">{{ settings.exclude_keywords | join('\n') }}</textarea>
+            </div>
+            <div class="form-group">
+                <label for="exclude_companies">Exclude Companies (one per line) — never import jobs from these companies</label>
+                <textarea id="exclude_companies" name="exclude_companies"
+                          rows="3"
+                          placeholder="Staffing Agency Inc&#10;Spam Recruiter LLC">{{ settings.exclude_companies | join('\n') }}</textarea>
+            </div>
+            <div class="form-group">
+                <label for="exclude_title_keywords">Exclude Title Keywords (one per line) — skips jobs whose title contains these words</label>
+                <textarea id="exclude_title_keywords" name="exclude_title_keywords"
+                          rows="3"
+                          placeholder="pharmacist&#10;dental&#10;registered nurse">{{ settings.exclude_title_keywords | join('\n') }}</textarea>
             </div>
             <div class="form-group">
                 <label for="max_days_old">Max Posting Age (days)</label>

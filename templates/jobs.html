@@ -252,6 +252,112 @@
       white-space: nowrap;
     }
 
+    /* ── Quick Search Bar ────────────────────────────────── */
+    .quick-search-bar {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.75rem 1rem;
+      background: #0c0e14;
+      border: 1px solid #1a1f2e;
+      border-radius: 8px;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    .quick-search-bar label {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #6b7280;
+      margin-right: 0.25rem;
+    }
+
+    .quick-search-bar input[type="text"] {
+      background: #111318;
+      color: #e2e8f0;
+      border: 1px solid #2a2f3e;
+      border-radius: 6px;
+      padding: 0.4rem 0.6rem;
+      font-size: 0.85rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .quick-search-bar input[type="text"]:focus {
+      border-color: #00e5ff;
+    }
+
+    .quick-search-bar input[type="text"]::placeholder {
+      color: #4b5563;
+    }
+
+    .quick-search-bar .qs-query { width: 220px; }
+    .quick-search-bar .qs-location { width: 180px; }
+
+    .quick-search-bar button {
+      background: rgba(0, 229, 255, 0.12);
+      color: #00e5ff;
+      border: 1px solid rgba(0, 229, 255, 0.25);
+      border-radius: 6px;
+      padding: 0.4rem 1rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .quick-search-bar button:hover {
+      background: rgba(0, 229, 255, 0.2);
+      border-color: #00e5ff;
+    }
+
+    .quick-search-bar button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .quick-search-bar .qs-status {
+      font-size: 0.82rem;
+      color: #6b7280;
+    }
+
+    .quick-search-bar .qs-status.running {
+      color: #fbbf24;
+    }
+
+    .quick-search-bar .qs-status.done {
+      color: #34d399;
+    }
+
+    .quick-search-bar .qs-status.error {
+      color: #f87171;
+    }
+
+    /* ── Ghost Risk Badge ────────────────────────────────── */
+    .ghost-badge {
+      display: inline-block;
+      padding: 0.1rem 0.45rem;
+      border-radius: 4px;
+      font-size: 0.65rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      vertical-align: middle;
+      margin-left: 6px;
+    }
+    .ghost-badge.ghost-high { background: rgba(239, 68, 68, 0.15); color: #f87171; }
+    .ghost-badge.ghost-medium { background: rgba(245, 158, 11, 0.12); color: #fbbf24; }
+
+    /* ── Job Summary ──────────────────────────────────── */
+    .job-summary-text {
+      font-size: 0.78rem;
+      color: #6b7280;
+      margin-top: 2px;
+      line-height: 1.4;
+      max-width: 500px;
+    }
+
     /* ── Empty State ───────────────────────────────────── */
     .empty-state {
       text-align: center;
@@ -299,6 +405,22 @@
         {% endfor %}
       </select>
 
+      <label for="filter-campaign">Campaign</label>
+      <select id="filter-campaign" onchange="applyFilters()">
+        <option value="">All Campaigns</option>
+        {% for sq in search_queries %}
+        <option value="{{ sq }}" {% if current_search_query == sq %}selected{% endif %}>{{ sq }}</option>
+        {% endfor %}
+      </select>
+
+      <label for="filter-freshness">Posted</label>
+      <select id="filter-freshness" onchange="applyFilters()">
+        <option value="0" {% if current_freshness == 0 %}selected{% endif %}>Any Time</option>
+        <option value="24" {% if current_freshness == 24 %}selected{% endif %}>Last 24h</option>
+        <option value="48" {% if current_freshness == 48 %}selected{% endif %}>Last 48h</option>
+        <option value="168" {% if current_freshness == 168 %}selected{% endif %}>Last 7 days</option>
+      </select>
+
       <label for="filter-min-score">Min Score</label>
       <select id="filter-min-score" onchange="applyFilters()">
         <option value="0" {% if current_min_score == 0 %}selected{% endif %}>All Scores</option>
@@ -328,6 +450,16 @@
       </div>
 
       <span class="filter-count">Showing <strong>{{ jobs | length }}</strong> job{{ 's' if jobs | length != 1 else '' }}</span>
+    </div>
+
+    <!-- Quick Search -->
+    <div class="quick-search-bar">
+      <label>Quick Search</label>
+      <input type="text" id="qs-query" class="qs-query" placeholder="e.g. IT Support, Facility Manager">
+      <label>Location</label>
+      <input type="text" id="qs-location" class="qs-location" placeholder="e.g. Oklahoma City, OK">
+      <button id="qs-btn" onclick="runQuickSearch()">Search</button>
+      <span id="qs-status" class="qs-status"></span>
     </div>
 
     <!-- Jobs Table -->
@@ -369,8 +501,13 @@
               <span class="score-badge score-low">&mdash;</span>
               {% endif %}
             </td>
-            <td class="job-title-cell">{{ job.title }}</td>
-            <td class="job-company-cell">{{ job.company or '—' }}</td>
+            <td class="job-title-cell">
+              {{ job.title }}
+              {% if job.ghost_risk == 'high' %}<span class="ghost-badge ghost-high" title="Possibly a ghost/fake listing">Ghost?</span>
+              {% elif job.ghost_risk == 'medium' %}<span class="ghost-badge ghost-medium" title="Some vague elements in listing">Vague</span>{% endif %}
+              {% if job.summary %}<div class="job-summary-text">{{ job.summary }}</div>{% endif %}
+            </td>
+            <td class="job-company-cell">{{ job.company or '—' }}{% if not job.salary_text and job.salary_estimate %}<div style="font-size:0.72rem;color:#fbbf24;margin-top:1px;" title="AI-estimated salary">{{ job.salary_estimate }} (est.)</div>{% elif job.salary_text %}<div style="font-size:0.72rem;color:#6b7280;margin-top:1px;">{{ job.salary_text }}</div>{% endif %}</td>
             <td class="job-location-cell">{{ job.location or '—' }}</td>
             <td>
               <span class="status-badge status-{{ job.status or 'new' }}">{{ (job.status or 'new') | capitalize }}</span>
@@ -440,6 +577,8 @@
     function applyFilters() {
       var status = document.getElementById('filter-status').value;
       var source = document.getElementById('filter-source').value;
+      var campaign = document.getElementById('filter-campaign').value;
+      var freshness = document.getElementById('filter-freshness').value;
       var minScore = document.getElementById('filter-min-score').value;
       var sortVal = document.getElementById('filter-sort').value;
       var lastUnderscore = sortVal.lastIndexOf('_');
@@ -448,6 +587,8 @@
       var params = new URLSearchParams();
       if (status) params.set('status', status);
       if (source) params.set('source', source);
+      if (campaign) params.set('search_query', campaign);
+      if (freshness && freshness !== '0') params.set('freshness', freshness);
       if (minScore && minScore !== '0') params.set('min_score', minScore);
       if (sort) params.set('sort', sort);
       if (order) params.set('order', order);
@@ -458,12 +599,18 @@
     function sortBy(column) {
       var status = document.getElementById('filter-status').value;
       var source = document.getElementById('filter-source').value;
+      var campaign = document.getElementById('filter-campaign').value;
+      var freshness = document.getElementById('filter-freshness').value;
+      var minScore = document.getElementById('filter-min-score').value;
       var defaults = { score: 'desc', title: 'asc', company: 'asc', location: 'asc', status: 'asc', created_at: 'desc' };
       var order = defaults[column] || 'desc';
       if (currentSort === column) order = currentOrder === 'desc' ? 'asc' : 'desc';
       var params = new URLSearchParams();
       if (status) params.set('status', status);
       if (source) params.set('source', source);
+      if (campaign) params.set('search_query', campaign);
+      if (freshness && freshness !== '0') params.set('freshness', freshness);
+      if (minScore && minScore !== '0') params.set('min_score', minScore);
       params.set('sort', column);
       params.set('order', order);
       window.location.href = '/jobs?' + params.toString();
@@ -474,6 +621,57 @@
       var el = document.querySelector('.filter-count strong');
       if (el) el.textContent = count;
     }
+
+    /* ── Quick Search ──────────────────────────────────── */
+    function runQuickSearch() {
+      var query = document.getElementById('qs-query').value.trim();
+      var location = document.getElementById('qs-location').value.trim();
+      var btn = document.getElementById('qs-btn');
+      var statusEl = document.getElementById('qs-status');
+
+      if (!query) {
+        statusEl.className = 'qs-status error';
+        statusEl.textContent = 'Enter a search query';
+        return;
+      }
+
+      btn.disabled = true;
+      statusEl.className = 'qs-status running';
+      statusEl.textContent = 'Searching (this may take a minute)...';
+
+      fetch('/api/scraper/search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: query, location: location })
+      })
+      .then(function(resp) { return resp.json(); })
+      .then(function(data) {
+        if (data.error) {
+          statusEl.className = 'qs-status error';
+          statusEl.textContent = data.error;
+          btn.disabled = false;
+          return;
+        }
+        statusEl.className = 'qs-status done';
+        statusEl.textContent = 'Found ' + data.jobs_found + ' jobs (' + data.jobs_new + ' new, ' + data.scored + ' scored). Reloading...';
+        setTimeout(function() {
+          window.location.href = '/jobs?search_query=' + encodeURIComponent(query);
+        }, 1000);
+      })
+      .catch(function(err) {
+        statusEl.className = 'qs-status error';
+        statusEl.textContent = 'Search failed: ' + err.message;
+        btn.disabled = false;
+      });
+    }
+
+    // Allow Enter key in quick search inputs
+    document.getElementById('qs-query').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') runQuickSearch();
+    });
+    document.getElementById('qs-location').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') runQuickSearch();
+    });
 
     /* ── Inline Status Change (table) ──────────────────── */
     function changeStatus(selectEl) {

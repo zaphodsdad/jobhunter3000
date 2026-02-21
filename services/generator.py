@@ -319,15 +319,17 @@ def generate_resume(job: dict, settings: dict = None) -> dict:
         f"Description:\n{(job.get('description', '') or '')[:4000]}"
     )
 
-    # Build work history timeline for the prompt
-    work_timeline = ""
+    # Build complete work history with highlights for the prompt
+    work_history_block = ""
     for wh in profile.get("work_history", []):
         start = wh.get("start_year", "")
         end = wh.get("end_year", "")
         date_range = f"{start}-{end}" if start else wh.get("duration", "")
         location = wh.get("location", "")
-        loc_str = f" ({location})" if location else ""
-        work_timeline += f"- {wh['title']} @ {wh['company']}{loc_str} [{date_range}]\n"
+        loc_str = f" | {location}" if location else ""
+        work_history_block += f"\n### {wh['title']} @ {wh['company']}{loc_str} [{date_range}]\n"
+        for hl in wh.get("highlights", []):
+            work_history_block += f"  - {hl}\n"
 
     prompt = f"""You are an expert resume writer. Create a tailored resume for this specific job posting.
 
@@ -339,10 +341,10 @@ Core Strengths: {', '.join(profile.get('core_strengths', []))}
 Key Skills: {', '.join(profile.get('all_skills', [])[:25])}
 Unique Value: {profile.get('unique_value', '')}
 
-WORK TIMELINE (include dates on resume — do NOT omit any current positions):
-{work_timeline}
+COMPLETE WORK HISTORY — EVERY position below MUST appear in the final resume:
+{work_history_block}
 
-SOURCE RESUME (use this as the base — reorder, emphasize, and tailor):
+ADDITIONAL DETAIL FROM SOURCE RESUME (supplement the work history above):
 {resume_text[:5000]}
 
 TARGET JOB:
@@ -354,7 +356,8 @@ INSTRUCTIONS:
 - Use keywords and phrases from the job description naturally
 - Keep it to 1-2 pages worth of content
 - Use clean markdown formatting with clear sections
-- Include: Contact header, Professional Summary (tailored), Key Skills (relevant ones first), Professional Experience (reordered by relevance), Education
+- Include: Contact header, Professional Summary (tailored), Key Skills (relevant ones first), Professional Experience, Education
+- MANDATORY: The Professional Experience section must include ALL {len(profile.get('work_history', []))} positions from the work history above. Every single one. You may reorder by relevance and give less-relevant jobs fewer bullets, but no position may be omitted.
 - Do NOT fabricate experience or skills — only reorganize and emphasize what's real
 - Make the professional summary directly address what this employer is looking for
 

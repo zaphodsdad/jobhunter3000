@@ -233,6 +233,180 @@
             text-decoration: underline;
         }
 
+        /* ── Edit Mode ────────────────────────────────── */
+
+        .profile-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-edit-profile {
+            padding: 6px 14px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.15s;
+            background: rgba(34, 211, 238, 0.1);
+            color: #22d3ee;
+            border: 1px solid rgba(34, 211, 238, 0.25);
+        }
+        .btn-edit-profile:hover { background: rgba(34, 211, 238, 0.2); }
+
+        .btn-cancel-edit {
+            padding: 6px 14px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.15s;
+            background: rgba(107, 114, 128, 0.1);
+            color: #9ca3af;
+            border: 1px solid rgba(107, 114, 128, 0.25);
+        }
+        .btn-cancel-edit:hover { background: rgba(107, 114, 128, 0.2); }
+
+        .btn-save-profile {
+            padding: 6px 14px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.15s;
+            background: rgba(74, 222, 128, 0.1);
+            color: #4ade80;
+            border: 1px solid rgba(74, 222, 128, 0.25);
+        }
+        .btn-save-profile:hover { background: rgba(74, 222, 128, 0.2); }
+        .btn-save-profile:disabled { opacity: 0.5; cursor: wait; }
+
+        .profile-edit-form { display: none; margin-top: 16px; }
+        .profile-edit-form.active { display: block; }
+
+        .profile-edit-form .form-group {
+            margin-bottom: 14px;
+        }
+
+        .profile-edit-form .form-group label {
+            display: block;
+            font-size: 0.72rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+
+        .profile-edit-form .form-group input,
+        .profile-edit-form .form-group textarea {
+            width: 100%;
+            padding: 8px 10px;
+            font-size: 0.85rem;
+            font-family: inherit;
+            background: var(--bg-nav);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-primary);
+            box-sizing: border-box;
+            transition: border-color 0.15s;
+        }
+
+        .profile-edit-form .form-group input:focus,
+        .profile-edit-form .form-group textarea:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+        }
+
+        .wh-entry {
+            background: var(--bg-nav);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 14px;
+            margin-bottom: 10px;
+        }
+
+        .wh-entry-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .wh-entry-header strong {
+            font-size: 0.82rem;
+            color: var(--text-secondary);
+        }
+
+        .btn-remove-wh {
+            background: rgba(239, 68, 68, 0.1);
+            color: #ef4444;
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            border-radius: 4px;
+            padding: 2px 8px;
+            font-size: 0.72rem;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        .btn-remove-wh:hover { background: rgba(239, 68, 68, 0.2); }
+
+        .wh-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+
+        .wh-row-3 {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+
+        .wh-field label {
+            display: block;
+            font-size: 0.68rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+        }
+
+        .wh-field input,
+        .wh-field textarea {
+            width: 100%;
+            padding: 6px 8px;
+            font-size: 0.82rem;
+            font-family: inherit;
+            background: var(--bg-body);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            color: var(--text-primary);
+            box-sizing: border-box;
+        }
+
+        .wh-field input:focus,
+        .wh-field textarea:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+        }
+
+        .btn-add-wh {
+            background: rgba(34, 211, 238, 0.08);
+            color: #22d3ee;
+            border: 1px dashed rgba(34, 211, 238, 0.3);
+            border-radius: 6px;
+            padding: 10px;
+            width: 100%;
+            font-size: 0.82rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.15s;
+            font-family: inherit;
+        }
+        .btn-add-wh:hover { background: rgba(34, 211, 238, 0.15); }
+
         /* ── Collapsible profile ────────────────────────── */
 
         .profile-toggle {
@@ -537,10 +711,13 @@
     <div class="profile-card">
         <div class="profile-toggle" onclick="toggleProfile()">
             <div>
-                <h2 class="profile-name">{{ profile.name or 'Candidate Profile' }}</h2>
-                <p class="profile-headline">{{ profile.headline or '' }}</p>
+                <h2 class="profile-name" id="profileNameDisplay">{{ profile.name or 'Candidate Profile' }}</h2>
+                <p class="profile-headline" id="profileHeadlineDisplay">{{ profile.headline or '' }}</p>
             </div>
             <div style="display: flex; align-items: center; gap: 16px;">
+                <div class="profile-actions" id="profileActions" onclick="event.stopPropagation()">
+                    <button class="btn-edit-profile" id="btnEditProfile" onclick="startEditProfile()">Edit Profile</button>
+                </div>
                 <div class="profile-meta" style="margin-bottom: 0;">
                     {% if profile.experience_years %}
                     <div class="profile-meta-item"><strong>{{ profile.experience_years }}+</strong> years</div>
@@ -557,6 +734,7 @@
             {{ profile.narrative[:120] }}{% if profile.narrative|length > 120 %}...{% endif %}
         </div>
 
+        <!-- ── View Mode ──────────────────────────────── -->
         <div class="profile-body" id="profileBody">
             {% if profile.narrative %}
             <div class="profile-narrative" style="margin-top: 16px;">{{ profile.narrative }}</div>
@@ -614,7 +792,8 @@
                     <div class="work-history-item">
                         <span class="work-title">{{ job.title }}</span>
                         <span class="work-company">@ {{ job.company }}</span>
-                        <span class="work-duration">({{ job.duration }})</span>
+                        {% if job.location %}<span class="work-duration"> | {{ job.location }}</span>{% endif %}
+                        <span class="work-duration">[{{ job.start_year }}-{{ job.end_year }}]</span>
                     </div>
                     {% endfor %}
                 </div>
@@ -648,7 +827,117 @@
             </div>
 
             <div style="margin-top: 16px; font-size: 0.75rem; color: var(--text-muted);">
-                Generated from resume analysis. <a href="/resumes" style="color: var(--accent-primary);">Re-analyze in Arsenal</a> to update.
+                Generated from resume analysis. <a href="/resumes" style="color: var(--accent-primary);">Re-analyze in Arsenal</a> to update, or click Edit Profile to modify directly.
+            </div>
+        </div>
+
+        <!-- ── Edit Mode ──────────────────────────────── -->
+        <div class="profile-edit-form" id="profileEditForm">
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Name</label>
+                    <input type="text" id="pe-name" value="{{ profile.name or '' }}">
+                </div>
+                <div class="form-group">
+                    <label>Experience (years)</label>
+                    <input type="number" id="pe-experience-years" value="{{ profile.experience_years or 0 }}" min="0">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Headline</label>
+                <input type="text" id="pe-headline" value="{{ profile.headline or '' }}">
+            </div>
+
+            <div class="form-group">
+                <label>Narrative</label>
+                <textarea id="pe-narrative" rows="4">{{ profile.narrative or '' }}</textarea>
+            </div>
+
+            <div class="form-group">
+                <label>Core Strengths (comma-separated)</label>
+                <input type="text" id="pe-core-strengths" value="{{ profile.core_strengths | join(', ') }}">
+            </div>
+
+            <div class="form-group">
+                <label>Skills (comma-separated)</label>
+                <textarea id="pe-skills" rows="2">{{ profile.all_skills | join(', ') }}</textarea>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Target Roles (comma-separated)</label>
+                    <input type="text" id="pe-target-roles" value="{{ profile.target_roles | join(', ') }}">
+                </div>
+                <div class="form-group">
+                    <label>Industries (comma-separated)</label>
+                    <input type="text" id="pe-industries" value="{{ profile.industries | join(', ') }}">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Unique Value</label>
+                <textarea id="pe-unique-value" rows="2">{{ profile.unique_value or '' }}</textarea>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Education (comma-separated)</label>
+                    <input type="text" id="pe-education" value="{{ profile.education | join(', ') }}">
+                </div>
+                <div class="form-group">
+                    <label>Gaps to Address (comma-separated)</label>
+                    <input type="text" id="pe-gaps" value="{{ profile.gaps | join(', ') }}">
+                </div>
+            </div>
+
+            <!-- Work History -->
+            <div class="form-group">
+                <label>Work History</label>
+                <div id="pe-work-history">
+                    {% for job in profile.work_history %}
+                    <div class="wh-entry" data-idx="{{ loop.index0 }}">
+                        <div class="wh-entry-header">
+                            <strong>Position {{ loop.index }}</strong>
+                            <button type="button" class="btn-remove-wh" onclick="removeWorkEntry(this)">Remove</button>
+                        </div>
+                        <div class="wh-row">
+                            <div class="wh-field">
+                                <label>Title</label>
+                                <input type="text" class="wh-title" value="{{ job.title }}">
+                            </div>
+                            <div class="wh-field">
+                                <label>Company</label>
+                                <input type="text" class="wh-company" value="{{ job.company }}">
+                            </div>
+                        </div>
+                        <div class="wh-row-3">
+                            <div class="wh-field">
+                                <label>Location</label>
+                                <input type="text" class="wh-location" value="{{ job.location or '' }}">
+                            </div>
+                            <div class="wh-field">
+                                <label>Start Year</label>
+                                <input type="text" class="wh-start" value="{{ job.start_year or '' }}">
+                            </div>
+                            <div class="wh-field">
+                                <label>End Year</label>
+                                <input type="text" class="wh-end" value="{{ job.end_year or '' }}">
+                            </div>
+                        </div>
+                        <div class="wh-field">
+                            <label>Highlights (one per line)</label>
+                            <textarea class="wh-highlights" rows="3">{{ job.highlights | join('\n') }}</textarea>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                <button type="button" class="btn-add-wh" onclick="addWorkEntry()">+ Add Position</button>
+            </div>
+
+            <div style="display: flex; gap: 10px; margin-top: 16px;">
+                <button type="button" class="btn-save-profile" id="btnSaveProfile" onclick="saveProfile()">Save Profile</button>
+                <button type="button" class="btn-cancel-edit" onclick="cancelEditProfile()">Cancel</button>
             </div>
         </div>
     </div>
@@ -869,6 +1158,131 @@
      JavaScript
      ══════════════════════════════════════════════════════ -->
 <script>
+    // ── Profile edit mode ──────────────────────────────────
+    var profileEditActive = false;
+
+    function startEditProfile() {
+        // Expand the profile if collapsed
+        var body = document.getElementById('profileBody');
+        if (body.classList.contains('collapsed')) toggleProfile();
+
+        profileEditActive = true;
+        document.getElementById('profileBody').style.display = 'none';
+        document.getElementById('profileEditForm').classList.add('active');
+        document.getElementById('btnEditProfile').style.display = 'none';
+    }
+
+    function cancelEditProfile() {
+        profileEditActive = false;
+        document.getElementById('profileBody').style.display = '';
+        document.getElementById('profileEditForm').classList.remove('active');
+        document.getElementById('btnEditProfile').style.display = '';
+    }
+
+    function splitComma(str) {
+        return str.split(',').map(function(s) { return s.trim(); }).filter(function(s) { return s.length > 0; });
+    }
+
+    function collectProfile() {
+        var workEntries = document.querySelectorAll('#pe-work-history .wh-entry');
+        var workHistory = [];
+        workEntries.forEach(function(entry) {
+            var highlights = entry.querySelector('.wh-highlights').value
+                .split('\n').map(function(s) { return s.trim(); }).filter(function(s) { return s.length > 0; });
+            var startYear = entry.querySelector('.wh-start').value.trim();
+            var endYear = entry.querySelector('.wh-end').value.trim();
+            // Try to parse start as number
+            var startNum = parseInt(startYear);
+            if (!isNaN(startNum)) startYear = startNum;
+            // End year can be "Present" or a number
+            var endNum = parseInt(endYear);
+            if (!isNaN(endNum)) endYear = endNum;
+
+            var duration = '';
+            if (typeof startYear === 'number' && typeof endYear === 'number') {
+                duration = (endYear - startYear) + (endYear - startYear === 1 ? ' year' : ' years');
+            } else if (typeof startYear === 'number' && endYear === 'Present') {
+                var yrs = new Date().getFullYear() - startYear;
+                duration = yrs + '+ years';
+            }
+
+            workHistory.push({
+                title: entry.querySelector('.wh-title').value.trim(),
+                company: entry.querySelector('.wh-company').value.trim(),
+                location: entry.querySelector('.wh-location').value.trim(),
+                start_year: startYear,
+                end_year: endYear,
+                duration: duration,
+                highlights: highlights
+            });
+        });
+
+        return {
+            name: document.getElementById('pe-name').value.trim(),
+            headline: document.getElementById('pe-headline').value.trim(),
+            experience_years: parseInt(document.getElementById('pe-experience-years').value) || 0,
+            experience_level: {{ profile.experience_level | tojson }},
+            core_strengths: splitComma(document.getElementById('pe-core-strengths').value),
+            all_skills: splitComma(document.getElementById('pe-skills').value),
+            target_roles: splitComma(document.getElementById('pe-target-roles').value),
+            industries: splitComma(document.getElementById('pe-industries').value),
+            education: splitComma(document.getElementById('pe-education').value),
+            gaps: splitComma(document.getElementById('pe-gaps').value),
+            unique_value: document.getElementById('pe-unique-value').value.trim(),
+            narrative: document.getElementById('pe-narrative').value.trim(),
+            work_history: workHistory
+        };
+    }
+
+    function saveProfile() {
+        var btn = document.getElementById('btnSaveProfile');
+        btn.disabled = true;
+        btn.textContent = 'Saving...';
+
+        var data = collectProfile();
+        fetch('/api/profile/candidate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        }).then(function(resp) {
+            if (!resp.ok) throw new Error('Save failed');
+            return resp.json();
+        }).then(function() {
+            showToast('Profile saved', 'success');
+            // Reload to show updated view mode
+            setTimeout(function() { window.location.reload(); }, 500);
+        }).catch(function(err) {
+            showToast('Error: ' + err.message, 'error');
+            btn.disabled = false;
+            btn.textContent = 'Save Profile';
+        });
+    }
+
+    function addWorkEntry() {
+        var container = document.getElementById('pe-work-history');
+        var count = container.querySelectorAll('.wh-entry').length;
+        var div = document.createElement('div');
+        div.className = 'wh-entry';
+        div.innerHTML = '<div class="wh-entry-header"><strong>Position ' + (count + 1) + '</strong>' +
+            '<button type="button" class="btn-remove-wh" onclick="removeWorkEntry(this)">Remove</button></div>' +
+            '<div class="wh-row"><div class="wh-field"><label>Title</label><input type="text" class="wh-title" value=""></div>' +
+            '<div class="wh-field"><label>Company</label><input type="text" class="wh-company" value=""></div></div>' +
+            '<div class="wh-row-3"><div class="wh-field"><label>Location</label><input type="text" class="wh-location" value=""></div>' +
+            '<div class="wh-field"><label>Start Year</label><input type="text" class="wh-start" value=""></div>' +
+            '<div class="wh-field"><label>End Year</label><input type="text" class="wh-end" value=""></div></div>' +
+            '<div class="wh-field"><label>Highlights (one per line)</label><textarea class="wh-highlights" rows="3"></textarea></div>';
+        container.appendChild(div);
+    }
+
+    function removeWorkEntry(btn) {
+        btn.closest('.wh-entry').remove();
+        // Re-number
+        var entries = document.querySelectorAll('#pe-work-history .wh-entry');
+        entries.forEach(function(e, i) {
+            e.querySelector('strong').textContent = 'Position ' + (i + 1);
+        });
+    }
+
     // ── Profile collapse/expand ─────────────────────────
     function toggleProfile() {
         const body = document.getElementById('profileBody');

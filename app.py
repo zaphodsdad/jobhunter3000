@@ -601,6 +601,15 @@ async def api_get_profile():
     return JSONResponse(profile)
 
 
+@app.post("/api/profile/candidate")
+async def api_save_candidate_profile(request: Request):
+    """Save edited candidate profile."""
+    from services.resumes import save_candidate_profile
+    data = await request.json()
+    save_candidate_profile(data)
+    return JSONResponse({"ok": True})
+
+
 # ---------------------------------------------------------------------------
 # OpenRouter Credits
 # ---------------------------------------------------------------------------

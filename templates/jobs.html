@@ -54,6 +54,47 @@
       color: #e2e8f0;
     }
 
+    /* ── Text Size Toggle ─────────────────────────────── */
+    .size-toggle {
+      display: inline-flex;
+      gap: 2px;
+      border: 1px solid #2a2f3e;
+      border-radius: 6px;
+      overflow: hidden;
+    }
+
+    .size-toggle button {
+      background: #111318;
+      color: #6b7280;
+      border: none;
+      padding: 0.3rem 0.5rem;
+      cursor: pointer;
+      font-weight: 700;
+      transition: all 0.15s;
+      line-height: 1;
+    }
+
+    .size-toggle button:hover {
+      color: #e2e8f0;
+    }
+
+    .size-toggle button.active {
+      background: rgba(0, 229, 255, 0.12);
+      color: #00e5ff;
+    }
+
+    .size-toggle .size-sm { font-size: 0.7rem; }
+    .size-toggle .size-md { font-size: 0.85rem; }
+    .size-toggle .size-lg { font-size: 1.05rem; }
+
+    /* Table size classes */
+    .jobs-table.text-sm { font-size: 0.82rem; }
+    .jobs-table.text-md { font-size: 0.95rem; }
+    .jobs-table.text-lg { font-size: 1.1rem; }
+
+    .jobs-table.text-md tbody tr.job-row td { padding: 0.7rem 0.75rem; }
+    .jobs-table.text-lg tbody tr.job-row td { padding: 0.85rem 0.75rem; }
+
     /* ── Jobs Table ─────────────────────────────────────── */
     .jobs-table-wrap {
       overflow-x: auto;
@@ -279,6 +320,13 @@
         <option value="title_asc" {% if current_sort == 'title' and current_order == 'asc' %}selected{% endif %}>Title (A &rarr; Z)</option>
       </select>
 
+      <label>Size</label>
+      <div class="size-toggle">
+        <button class="size-sm" onclick="setTextSize('sm')" title="Small">A</button>
+        <button class="size-md" onclick="setTextSize('md')" title="Medium">A</button>
+        <button class="size-lg" onclick="setTextSize('lg')" title="Large">A</button>
+      </div>
+
       <span class="filter-count">Showing <strong>{{ jobs | length }}</strong> job{{ 's' if jobs | length != 1 else '' }}</span>
     </div>
 
@@ -364,6 +412,23 @@
   <script>
     var currentSort = {{ current_sort | tojson }};
     var currentOrder = {{ current_order | tojson }};
+
+    /* ── Text Size ──────────────────────────────────────── */
+    function setTextSize(size) {
+      var table = document.querySelector('.jobs-table');
+      if (!table) return;
+      table.classList.remove('text-sm', 'text-md', 'text-lg');
+      table.classList.add('text-' + size);
+      document.querySelectorAll('.size-toggle button').forEach(function(btn) {
+        btn.classList.toggle('active', btn.classList.contains('size-' + size));
+      });
+      localStorage.setItem('jh3k-text-size', size);
+    }
+    // Restore saved size on load
+    (function() {
+      var saved = localStorage.getItem('jh3k-text-size') || 'sm';
+      setTextSize(saved);
+    })();
 
     /* ── Navigate to job detail page ───────────────────── */
     function openJob(jobId, event) {

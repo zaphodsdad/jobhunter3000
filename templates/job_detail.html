@@ -649,6 +649,21 @@
       </div>
     </div>
 
+    <!-- Bottom Actions -->
+    <div class="actions-bar" style="margin-top: 1.5rem;">
+      <label>Status</label>
+      <select class="status-select" id="statusSelectBottom" onchange="changeStatusFrom(this)">
+        {% for s in ['new', 'interested', 'applied', 'interviewing', 'offer', 'accepted', 'rejected', 'archived'] %}
+        <option value="{{ s }}" {% if (job.status or 'new') == s %}selected{% endif %}>{{ s | capitalize }}</option>
+        {% endfor %}
+      </select>
+      {% if job.url and not job.url.startswith('import://') %}
+      <div class="source-link">
+        <a href="{{ job.url }}" target="_blank" rel="noopener">View on {{ (job.source or 'Source') | capitalize }} &rarr;</a>
+      </div>
+      {% endif %}
+    </div>
+
     <a href="/jobs" class="back-link" style="margin-top: 1.5rem;">&larr; Back to Intel</a>
 
   </main>
@@ -658,7 +673,14 @@
 
     /* ── Status Change ─────────────────────────────────── */
     function changeStatus() {
-      var newStatus = document.getElementById('statusSelect').value;
+      changeStatusFrom(document.getElementById('statusSelect'));
+    }
+
+    function changeStatusFrom(selectEl) {
+      var newStatus = selectEl.value;
+      // Sync both dropdowns
+      document.getElementById('statusSelect').value = newStatus;
+      document.getElementById('statusSelectBottom').value = newStatus;
       fetch('/api/jobs/' + JOB_ID + '/status', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

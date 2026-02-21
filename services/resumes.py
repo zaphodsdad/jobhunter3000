@@ -252,6 +252,15 @@ def load_candidate_profile() -> dict | None:
     return None
 
 
+def save_candidate_profile(data: dict) -> None:
+    """Save updated candidate profile to disk."""
+    profile_path = os.path.join(
+        os.path.dirname(os.path.dirname(__file__)), "data", "candidate_profile.json"
+    )
+    with open(profile_path, "w") as f:
+        json.dump(data, f, indent=2)
+
+
 def delete_resume(conn, resume_id: int) -> bool:
     """Delete a resume record and file."""
     resume = get_resume(conn, resume_id)

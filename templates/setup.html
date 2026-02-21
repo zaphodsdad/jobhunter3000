@@ -1,0 +1,1514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Setup — JobHunter3000</title>
+    <style>
+        {% include 'base_styles.html' %}
+
+        /* ── Wizard Layout ──────────────────────────────────── */
+        body { padding-bottom: 80px; }
+
+        .wizard-topbar {
+            background: var(--bg-nav);
+            border-bottom: 1px solid var(--border);
+            padding: 14px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .wizard-topbar h1 { font-size: 20px; font-weight: 700; }
+        .wizard-topbar h1 span { color: var(--accent-primary); }
+        .wizard-topbar .setup-label {
+            font-size: 12px; text-transform: uppercase; letter-spacing: 1.5px;
+            color: var(--text-muted); font-weight: 600;
+        }
+
+        /* ── Step Indicator ─────────────────────────────────── */
+        .step-indicator {
+            display: flex; align-items: center; justify-content: center;
+            padding: 24px 24px 0; max-width: 700px; margin: 0 auto;
+        }
+        .step-dot {
+            width: 36px; height: 36px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 14px; font-weight: 700;
+            background: var(--bg-card); border: 2px solid var(--border);
+            color: var(--text-muted); flex-shrink: 0;
+            transition: all 0.3s ease; cursor: pointer;
+        }
+        .step-dot.active {
+            border-color: var(--accent-primary); color: var(--accent-primary);
+            box-shadow: 0 0 12px rgba(34, 211, 238, 0.25);
+        }
+        .step-dot.done {
+            border-color: var(--score-high); background: var(--score-high);
+            color: #0f1117;
+        }
+        .step-line {
+            flex: 1; height: 2px; background: var(--border);
+            margin: 0 6px; transition: background 0.3s ease;
+        }
+        .step-line.done { background: var(--score-high); }
+
+        /* ── Wizard Content ─────────────────────────────────── */
+        .wizard-content {
+            max-width: 700px; margin: 0 auto; padding: 24px;
+        }
+        .wizard-step { display: none; }
+        .wizard-step.active { display: block; }
+
+        .step-title {
+            font-size: 22px; font-weight: 700; margin-bottom: 4px;
+        }
+        .step-subtitle {
+            font-size: 14px; color: var(--text-secondary); margin-bottom: 24px;
+        }
+
+        /* ── Wizard Footer ──────────────────────────────────── */
+        .wizard-footer {
+            position: fixed; bottom: 0; left: 0; right: 0;
+            background: var(--bg-nav); border-top: 1px solid var(--border);
+            padding: 14px 24px;
+            display: flex; align-items: center; justify-content: space-between;
+            z-index: 100;
+        }
+        .wizard-footer .step-count {
+            font-size: 13px; color: var(--text-muted); font-weight: 500;
+        }
+
+        /* ── Provider Cards ─────────────────────────────────── */
+        .provider-grid {
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
+            margin-bottom: 20px;
+        }
+        .provider-card {
+            background: var(--bg-card); border: 2px solid var(--border);
+            border-radius: 8px; padding: 16px; text-align: center;
+            cursor: pointer; transition: all 0.2s ease;
+        }
+        .provider-card:hover { border-color: var(--text-muted); }
+        .provider-card.selected {
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 12px rgba(34, 211, 238, 0.15);
+        }
+        .provider-card .provider-icon { font-size: 28px; margin-bottom: 8px; }
+        .provider-card .provider-name {
+            font-size: 15px; font-weight: 600; color: var(--text-primary);
+        }
+        .provider-card .provider-tag {
+            font-size: 11px; font-weight: 600; text-transform: uppercase;
+            letter-spacing: 0.5px; margin-top: 4px;
+            padding: 2px 8px; border-radius: 4px; display: inline-block;
+        }
+        .tag-recommended { background: rgba(34, 211, 238, 0.15); color: var(--accent-primary); }
+        .tag-free { background: rgba(74, 222, 128, 0.15); color: var(--score-high); }
+        .tag-advanced { background: rgba(107, 114, 128, 0.15); color: var(--text-secondary); }
+
+        .provider-detail { display: none; margin-top: 16px; }
+        .provider-detail.active { display: block; }
+
+        .instructions-box {
+            background: var(--bg-nav); border: 1px solid var(--border);
+            border-radius: 6px; padding: 14px 16px; margin-bottom: 16px;
+            font-size: 13px; color: var(--text-secondary); line-height: 1.7;
+        }
+        .instructions-box ol { padding-left: 20px; margin: 0; }
+        .instructions-box li { margin-bottom: 4px; }
+
+        /* ── Scoring model selector ─────────────────────────── */
+        .scoring-section {
+            margin-top: 20px; padding-top: 16px;
+            border-top: 1px solid var(--border);
+        }
+        .scoring-section h3 {
+            font-size: 14px; font-weight: 600; color: var(--text-secondary);
+            text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px;
+        }
+
+        /* ── Test Result ────────────────────────────────────── */
+        .test-row { display: flex; align-items: center; gap: 12px; margin-top: 12px; }
+        .test-result {
+            font-size: 13px; font-weight: 500; transition: opacity 0.2s ease;
+        }
+        .test-result.success { color: var(--score-high); }
+        .test-result.error { color: #f87171; }
+
+        /* ── Drop Zone (Step 2) ─────────────────────────────── */
+        .drop-zone {
+            border: 2px dashed var(--border); border-radius: 8px;
+            padding: 40px 20px; text-align: center; cursor: pointer;
+            transition: border-color 0.2s, background 0.2s; position: relative;
+        }
+        .drop-zone:hover, .drop-zone.drag-over {
+            border-color: var(--accent-primary);
+            background: rgba(34, 211, 238, 0.04);
+        }
+        .drop-zone input[type="file"] {
+            position: absolute; inset: 0; opacity: 0; cursor: pointer;
+        }
+        .drop-zone-text { color: var(--text-secondary); font-size: 14px; }
+        .drop-zone-text strong { color: var(--accent-primary); }
+        .drop-zone-hint { color: var(--text-muted); font-size: 12px; margin-top: 4px; }
+
+        .uploaded-files {
+            margin-top: 16px; display: flex; flex-direction: column; gap: 8px;
+        }
+        .uploaded-file {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 10px 14px; background: var(--bg-card);
+            border: 1px solid var(--border); border-radius: 6px; font-size: 13px;
+        }
+        .uploaded-file .file-name { color: var(--text-primary); font-weight: 500; }
+        .uploaded-file .file-status { font-size: 12px; }
+        .uploaded-file .file-status.ok { color: var(--score-high); }
+        .uploaded-file .file-status.pending { color: var(--text-muted); }
+
+        .analysis-progress {
+            margin-top: 16px; padding: 14px 16px;
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: 6px; font-size: 13px; color: var(--text-secondary);
+        }
+        .analysis-progress .spinner {
+            display: inline-block; width: 14px; height: 14px;
+            border: 2px solid var(--border); border-top-color: var(--accent-primary);
+            border-radius: 50%; animation: spin 0.8s linear infinite;
+            vertical-align: middle; margin-right: 8px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .skip-link {
+            display: block; text-align: center; margin-top: 16px;
+            font-size: 13px; color: var(--text-muted); cursor: pointer;
+        }
+        .skip-link:hover { color: var(--text-secondary); }
+
+        /* ── Role List (Step 4) ─────────────────────────────── */
+        .role-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+        .role-item {
+            display: flex; align-items: center; gap: 8px;
+            padding: 8px 12px; background: var(--bg-card);
+            border: 1px solid var(--border); border-radius: 6px;
+        }
+        .role-rank {
+            font-size: 14px; font-weight: 700; color: var(--accent-primary);
+            min-width: 24px; text-align: center;
+        }
+        .role-text { flex: 1; font-size: 14px; color: var(--text-primary); }
+        .role-controls { display: flex; gap: 4px; }
+        .role-controls button {
+            background: transparent; border: 1px solid var(--border);
+            color: var(--text-muted); border-radius: 4px; width: 28px; height: 28px;
+            cursor: pointer; font-size: 14px; display: flex; align-items: center;
+            justify-content: center; transition: all 0.15s;
+        }
+        .role-controls button:hover {
+            border-color: var(--accent-primary); color: var(--accent-primary);
+        }
+        .role-add-row {
+            display: flex; gap: 8px; margin-top: 8px;
+        }
+        .role-add-row input { flex: 1; }
+
+        /* ── Work Mode Toggle ───────────────────────────────── */
+        .work-mode-group { display: flex; gap: 0; margin-bottom: 16px; }
+        .work-mode-group label {
+            flex: 1; display: flex; align-items: center; justify-content: center;
+            padding: 10px 12px; font-size: 13px; font-weight: 500;
+            color: var(--text-secondary); background: var(--bg-nav);
+            border: 1px solid var(--border); cursor: pointer; transition: all 0.15s;
+        }
+        .work-mode-group label:first-child { border-radius: 6px 0 0 6px; }
+        .work-mode-group label:last-child { border-radius: 0 6px 6px 0; }
+        .work-mode-group label:not(:first-child) { border-left: none; }
+        .work-mode-group input { display: none; }
+        .work-mode-group input:checked + label {
+            background: var(--accent-primary); color: #0f1117;
+            border-color: var(--accent-primary); font-weight: 600;
+        }
+
+        /* ── Tag Input (Step 5) ─────────────────────────────── */
+        .tag-input-wrapper {
+            display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
+            padding: 8px 12px; background: var(--bg-nav);
+            border: 1px solid var(--border); border-radius: 6px;
+            min-height: 42px; cursor: text;
+        }
+        .tag-input-wrapper:focus-within {
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 2px rgba(34, 211, 238, 0.15);
+        }
+        .tag-input-wrapper .tag-pill {
+            display: inline-flex; align-items: center; gap: 4px;
+            padding: 3px 10px; font-size: 12px; font-weight: 600;
+            border-radius: 999px; white-space: nowrap;
+        }
+        .tag-pill.green {
+            background: rgba(74, 222, 128, 0.15); color: var(--score-high);
+        }
+        .tag-pill.red {
+            background: rgba(248, 113, 113, 0.15); color: #f87171;
+        }
+        .tag-pill.blue {
+            background: rgba(34, 211, 238, 0.15); color: var(--accent-primary);
+        }
+        .tag-pill .tag-remove {
+            cursor: pointer; font-size: 14px; line-height: 1;
+            opacity: 0.6; transition: opacity 0.15s;
+        }
+        .tag-pill .tag-remove:hover { opacity: 1; }
+        .tag-input-wrapper input {
+            border: none; background: transparent; color: var(--text-primary);
+            font-size: 14px; font-family: var(--font-stack);
+            outline: none; flex: 1; min-width: 120px; padding: 0;
+        }
+
+        /* ── Launch Summary (Step 6) ────────────────────────── */
+        .summary-grid {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+            margin-bottom: 20px;
+        }
+        .summary-item {
+            padding: 12px 14px; background: var(--bg-card);
+            border: 1px solid var(--border); border-radius: 6px;
+        }
+        .summary-label {
+            font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;
+            color: var(--text-muted); margin-bottom: 4px;
+        }
+        .summary-value { font-size: 15px; font-weight: 600; color: var(--text-primary); }
+
+        .search-profile-preview {
+            padding: 10px 14px; background: var(--bg-nav);
+            border: 1px solid var(--border); border-radius: 6px;
+            margin-bottom: 8px;
+        }
+        .search-profile-preview .sp-name {
+            font-size: 14px; font-weight: 600; color: var(--text-primary);
+        }
+        .search-profile-preview .sp-meta {
+            font-size: 12px; color: var(--text-secondary); margin-top: 2px;
+        }
+
+        .board-checklist {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+            margin-bottom: 16px;
+        }
+        .board-check-item {
+            display: flex; align-items: center; gap: 10px;
+            padding: 10px 14px; background: var(--bg-nav);
+            border: 1px solid var(--border); border-radius: 6px;
+            cursor: pointer; transition: all 0.15s; font-size: 14px;
+        }
+        .board-check-item:hover { border-color: var(--accent-primary); }
+        .board-check-item input[type="checkbox"] {
+            accent-color: var(--accent-primary); width: 16px; height: 16px;
+        }
+
+        .launch-option {
+            display: flex; align-items: center; gap: 10px;
+            padding: 12px 14px; background: var(--bg-card);
+            border: 1px solid var(--border); border-radius: 6px;
+            margin-bottom: 12px;
+        }
+        .launch-option input[type="checkbox"] {
+            accent-color: var(--accent-primary); width: 16px; height: 16px;
+        }
+        .launch-option label {
+            font-size: 14px; color: var(--text-primary); cursor: pointer;
+        }
+
+        .btn-launch {
+            width: 100%; padding: 16px; font-size: 18px; font-weight: 700;
+            text-transform: uppercase; letter-spacing: 1.5px;
+        }
+
+        /* ── Model Select ───────────────────────────────────── */
+        .model-select {
+            width: 100%; padding: 9px 12px; font-size: 14px; font-family: var(--font-stack);
+            color: var(--text-primary); background: var(--bg-nav);
+            border: 1px solid var(--border); border-radius: 6px;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23999' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            padding-right: 32px;
+        }
+        .model-select:focus { outline: none; border-color: var(--accent-primary); }
+
+        /* ── Input with toggle ──────────────────────────────── */
+        .input-with-toggle { position: relative; }
+        .input-with-toggle input { padding-right: 48px; }
+        .toggle-visibility {
+            position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+            background: transparent; border: none; color: var(--text-muted);
+            cursor: pointer; font-size: 12px; padding: 4px 8px;
+        }
+        .toggle-visibility:hover { color: var(--text-primary); }
+
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+    </style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════
+     Topbar (minimal — no nav)
+     ═══════════════════════════════════════════════════════════ -->
+<div class="wizard-topbar">
+    <h1>Job<span>Hunter</span>3000</h1>
+    <span class="setup-label">Setup Wizard</span>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     Step Indicator
+     ═══════════════════════════════════════════════════════════ -->
+<div class="step-indicator" id="stepIndicator">
+    <div class="step-dot active" data-step="1" onclick="goToStep(1)">1</div>
+    <div class="step-line" data-after="1"></div>
+    <div class="step-dot" data-step="2" onclick="goToStep(2)">2</div>
+    <div class="step-line" data-after="2"></div>
+    <div class="step-dot" data-step="3" onclick="goToStep(3)">3</div>
+    <div class="step-line" data-after="3"></div>
+    <div class="step-dot" data-step="4" onclick="goToStep(4)">4</div>
+    <div class="step-line" data-after="4"></div>
+    <div class="step-dot" data-step="5" onclick="goToStep(5)">5</div>
+    <div class="step-line" data-after="5"></div>
+    <div class="step-dot" data-step="6" onclick="goToStep(6)">6</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     Wizard Steps
+     ═══════════════════════════════════════════════════════════ -->
+<div class="wizard-content">
+
+    <!-- ── Step 1: Configure LLM ──────────────────────────── -->
+    <div class="wizard-step active" id="step-1">
+        <h2 class="step-title">Configure Your AI</h2>
+        <p class="step-subtitle">Pick an AI provider to power job scoring and resume generation.</p>
+
+        <div class="provider-grid">
+            <div class="provider-card" data-provider="openrouter" onclick="selectProvider('openrouter')">
+                <div class="provider-icon">&#9889;</div>
+                <div class="provider-name">OpenRouter</div>
+                <div class="provider-tag tag-recommended">Recommended</div>
+            </div>
+            <div class="provider-card" data-provider="google" onclick="selectProvider('google')">
+                <div class="provider-icon">&#10024;</div>
+                <div class="provider-name">Google Gemini</div>
+                <div class="provider-tag tag-free">Free Tier</div>
+            </div>
+            <div class="provider-card" data-provider="ollama" onclick="selectProvider('ollama')">
+                <div class="provider-icon">&#128421;</div>
+                <div class="provider-name">Ollama</div>
+                <div class="provider-tag tag-advanced">Advanced</div>
+            </div>
+        </div>
+
+        <!-- OpenRouter detail -->
+        <div class="provider-detail" id="detail-openrouter">
+            <div class="instructions-box">
+                <ol>
+                    <li>Go to <a href="https://openrouter.ai" target="_blank" style="color:var(--accent-primary)">openrouter.ai</a> and create a free account</li>
+                    <li>Click your profile &rarr; Keys &rarr; Create Key</li>
+                    <li>Copy the key (starts with <code>sk-or-...</code>) and paste it below</li>
+                    <li>Add $5 of credits &mdash; that's weeks of job searching</li>
+                </ol>
+            </div>
+            <div class="form-group">
+                <label>API Key</label>
+                <div class="input-with-toggle">
+                    <input type="password" id="w-or-key" placeholder="sk-or-v1-..."
+                           value="{{ settings.openrouter_api_key if settings.openrouter_api_key and 'mask' not in (settings.openrouter_api_key|string) else '' }}">
+                    <button type="button" class="toggle-visibility" onclick="toggleVis('w-or-key', this)">SHOW</button>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Model</label>
+                <select id="w-or-model" class="model-select"></select>
+            </div>
+        </div>
+
+        <!-- Google detail -->
+        <div class="provider-detail" id="detail-google">
+            <div class="instructions-box">
+                <ol>
+                    <li>Go to <a href="https://aistudio.google.com" target="_blank" style="color:var(--accent-primary)">aistudio.google.com</a> (free Google account required)</li>
+                    <li>Click "Get API Key" &rarr; Create API Key</li>
+                    <li>Copy the key and paste it below. No credit card needed.</li>
+                </ol>
+            </div>
+            <div class="form-group">
+                <label>API Key</label>
+                <div class="input-with-toggle">
+                    <input type="password" id="w-google-key" placeholder="AIza..."
+                           value="{{ settings.google_api_key if settings.google_api_key and 'mask' not in (settings.google_api_key|string) else '' }}">
+                    <button type="button" class="toggle-visibility" onclick="toggleVis('w-google-key', this)">SHOW</button>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Model</label>
+                <select id="w-google-model" class="model-select">
+                    <option value="gemini-2.0-flash" selected>Gemini 2.0 Flash (Free)</option>
+                    <option value="gemini-2.5-pro-preview">Gemini 2.5 Pro (Paid)</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Ollama detail -->
+        <div class="provider-detail" id="detail-ollama">
+            <div class="instructions-box">
+                <p>Ollama runs AI on your own computer. Requires technical setup.</p>
+                <ol>
+                    <li>Install from <a href="https://ollama.ai" target="_blank" style="color:var(--accent-primary)">ollama.ai</a> and pull a model</li>
+                    <li>Enter the Ollama URL below</li>
+                </ol>
+                <p style="margin-top:8px">If unsure, use OpenRouter instead.</p>
+            </div>
+            <div class="form-group">
+                <label>Endpoint URL</label>
+                <input type="text" id="w-ollama-endpoint"
+                       value="{{ settings.ollama_endpoint }}"
+                       placeholder="http://localhost:11434">
+            </div>
+            <div class="form-group">
+                <label>Model</label>
+                <select id="w-ollama-model" class="model-select">
+                    <option value="">Loading...</option>
+                </select>
+                <div id="w-ollama-status" style="font-size:12px;margin-top:4px;color:var(--text-muted)"></div>
+            </div>
+        </div>
+
+        <!-- Scoring model -->
+        <div class="scoring-section" id="scoringSection" style="display:none">
+            <h3>Scoring Model (runs on every job &mdash; use something cheap)</h3>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Scoring Provider</label>
+                    <select id="w-scoring-provider" class="model-select" onchange="updateScoringModels()">
+                        <option value="same">Same as above</option>
+                        <option value="openrouter">OpenRouter</option>
+                        <option value="google">Google Gemini</option>
+                        <option value="ollama">Ollama</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Scoring Model</label>
+                    <select id="w-scoring-model" class="model-select">
+                        <option value="">Same as main model</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="test-row">
+            <button type="button" class="btn btn-primary" id="btnTestLLM" onclick="testLLMConnection()">Test Connection</button>
+            <span id="w-test-result" class="test-result"></span>
+        </div>
+    </div>
+
+    <!-- ── Step 2: Upload Resumes ─────────────────────────── -->
+    <div class="wizard-step" id="step-2">
+        <h2 class="step-title">Upload Your Resumes</h2>
+        <p class="step-subtitle">Drop your resume files here. We'll analyze them with AI to build your profile.</p>
+
+        <div class="drop-zone" id="dropZone">
+            <input type="file" id="fileInput" multiple accept=".pdf,.docx,.md,.txt">
+            <div class="drop-zone-text">
+                <strong>Click or drag files here</strong>
+            </div>
+            <div class="drop-zone-hint">PDF, DOCX, MD, or TXT</div>
+        </div>
+
+        <div class="uploaded-files" id="uploadedFiles"></div>
+
+        <div class="analysis-progress" id="analysisProgress" style="display:none">
+            <span class="spinner"></span>
+            <span id="analysisText">Analyzing with AI... This takes 30-60 seconds.</span>
+        </div>
+
+        <div style="display:flex; gap:12px; margin-top:16px; align-items:center;">
+            <button type="button" class="btn btn-primary" id="btnAnalyze" onclick="analyzeAll()" disabled>
+                Analyze All Resumes
+            </button>
+            <span id="w-analysis-result" class="test-result"></span>
+        </div>
+
+        <div class="skip-link" onclick="skipResumes()">Skip for now &mdash; I'll upload later</div>
+    </div>
+
+    <!-- ── Step 3: Review Profile ─────────────────────────── -->
+    <div class="wizard-step" id="step-3">
+        <h2 class="step-title">Review Your Profile</h2>
+        <p class="step-subtitle">The AI built this from your resume. Fix anything that's wrong.</p>
+
+        <div class="form-group">
+            <label>Name</label>
+            <input type="text" id="w-profile-name" placeholder="Your name">
+        </div>
+        <div class="form-group">
+            <label>Headline</label>
+            <input type="text" id="w-profile-headline" placeholder="e.g., Operations Manager with 20+ years experience">
+        </div>
+        <div class="form-group">
+            <label>Professional Narrative</label>
+            <textarea id="w-profile-narrative" rows="4" placeholder="Brief summary of your career and what you bring to the table..."></textarea>
+        </div>
+        <div class="form-group">
+            <label>Core Strengths (comma-separated)</label>
+            <input type="text" id="w-profile-strengths" placeholder="Project Management, Team Leadership, Data Analysis">
+        </div>
+
+        <p style="font-size:13px;color:var(--text-muted);margin-top:12px;">
+            You can edit detailed skills, work history, and more on the Dossier page later.
+        </p>
+    </div>
+
+    <!-- ── Step 4: What Are You Looking For ───────────────── -->
+    <div class="wizard-step" id="step-4">
+        <h2 class="step-title">What Are You Looking For?</h2>
+        <p class="step-subtitle">Tell us about your ideal job so we can score matches accurately.</p>
+
+        <div class="form-group">
+            <label>Target Roles (drag to reorder, top = highest priority)</label>
+            <div class="role-list" id="roleList"></div>
+            <div class="role-add-row">
+                <input type="text" id="roleInput" placeholder="Add a role title..."
+                       onkeydown="if(event.key==='Enter'){event.preventDefault();addRole()}">
+                <button type="button" class="btn" onclick="addRole()">Add</button>
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label>Location</label>
+                <input type="text" id="w-location" placeholder="Oklahoma City, OK"
+                       value="{{ settings.candidate_location }}">
+            </div>
+            <div class="form-group">
+                <label>Radius (miles)</label>
+                <input type="number" id="w-radius" min="5" max="200" step="5"
+                       value="{{ settings.candidate_radius_miles }}">
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label>Salary Min ($)</label>
+                <input type="number" id="w-salary-min" min="0" step="5000"
+                       value="{{ settings.candidate_salary_min }}">
+            </div>
+            <div class="form-group">
+                <label>Salary Max ($)</label>
+                <input type="number" id="w-salary-max" min="0" step="5000"
+                       value="{{ settings.candidate_salary_max }}">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>Work Mode</label>
+            <div class="work-mode-group">
+                <input type="radio" name="w-work-mode" id="wm-any" value="any"
+                       {{ 'checked' if settings.candidate_work_mode == 'any' else '' }}>
+                <label for="wm-any">Any</label>
+                <input type="radio" name="w-work-mode" id="wm-onsite" value="onsite"
+                       {{ 'checked' if settings.candidate_work_mode == 'onsite' else '' }}>
+                <label for="wm-onsite">On-site</label>
+                <input type="radio" name="w-work-mode" id="wm-hybrid" value="hybrid"
+                       {{ 'checked' if settings.candidate_work_mode == 'hybrid' else '' }}>
+                <label for="wm-hybrid">Hybrid</label>
+                <input type="radio" name="w-work-mode" id="wm-remote" value="remote"
+                       {{ 'checked' if settings.candidate_work_mode == 'remote' else '' }}>
+                <label for="wm-remote">Remote</label>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Step 5: Dream List ─────────────────────────────── -->
+    <div class="wizard-step" id="step-5">
+        <h2 class="step-title">Dream List</h2>
+        <p class="step-subtitle">Optional. Dream companies get instant alerts. Dealbreakers auto-reject jobs.</p>
+
+        <div class="form-group">
+            <label>Dream Companies (get notified for ANY job from these)</label>
+            <div class="tag-input-wrapper" id="dreamCompaniesWrap" onclick="focusTagInput(this)">
+                <input type="text" id="dreamCompaniesInput" placeholder="Type company name, press Enter..."
+                       onkeydown="handleTagKey(event, 'dreamCompanies', 'blue')">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>Target Industries</label>
+            <div class="tag-input-wrapper" id="targetIndustriesWrap" onclick="focusTagInput(this)">
+                <input type="text" id="targetIndustriesInput" placeholder="e.g., Oil & Gas, Technology..."
+                       onkeydown="handleTagKey(event, 'targetIndustries', 'blue')">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>Dealbreakers (auto-reject jobs containing these)</label>
+            <div class="tag-input-wrapper" id="dealbreakersWrap" onclick="focusTagInput(this)">
+                <input type="text" id="dealbreakersInput" placeholder="e.g., commission only, CDL required..."
+                       onkeydown="handleTagKey(event, 'dealbreakers', 'red')">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>Nice-to-Haves (boost score if job mentions these)</label>
+            <div class="tag-input-wrapper" id="niceToHavesWrap" onclick="focusTagInput(this)">
+                <input type="text" id="niceToHavesInput" placeholder="e.g., remote Fridays, stock options..."
+                       onkeydown="handleTagKey(event, 'niceToHaves', 'green')">
+            </div>
+        </div>
+
+        <p style="font-size:13px;color:var(--text-muted);">All fields are optional. You can set these later in Settings.</p>
+    </div>
+
+    <!-- ── Step 6: Launch ─────────────────────────────────── -->
+    <div class="wizard-step" id="step-6">
+        <h2 class="step-title">Ready to Launch</h2>
+        <p class="step-subtitle">Here's a summary of your setup. We'll auto-generate search profiles from your target roles.</p>
+
+        <div class="summary-grid" id="launchSummary"></div>
+
+        <h3 style="font-size:14px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-secondary);margin-bottom:12px;">
+            Auto-Generated Search Profiles
+        </h3>
+        <div id="searchProfilesPreview"></div>
+
+        <h3 style="font-size:14px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-secondary);margin:20px 0 12px;">
+            Job Boards to Scrape
+        </h3>
+        <div class="board-checklist" id="launchBoards"></div>
+
+        <div class="launch-option">
+            <input type="checkbox" id="runFirstScan" checked>
+            <label for="runFirstScan">Run first scan after setup (takes 2-5 minutes)</label>
+        </div>
+
+        <button type="button" class="btn btn-primary btn-launch" id="btnLaunch" onclick="launchSetup()">
+            Launch JobHunter3000
+        </button>
+    </div>
+
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     Wizard Footer
+     ═══════════════════════════════════════════════════════════ -->
+<div class="wizard-footer">
+    <button type="button" class="btn" id="btnBack" onclick="wizardBack()" style="visibility:hidden">
+        &larr; Back
+    </button>
+    <span class="step-count" id="stepCount">Step 1 of 6</span>
+    <button type="button" class="btn btn-primary" id="btnNext" onclick="wizardNext()">
+        Next &rarr;
+    </button>
+</div>
+
+<div class="toast-container" id="toast-container"></div>
+
+<script>
+// ══════════════════════════════════════════════════════════════
+// Wizard State
+// ══════════════════════════════════════════════════════════════
+var W = {
+    currentStep: 1,
+    totalSteps: 6,
+    provider: '{{ settings.llm_provider }}',
+    llmTested: false,
+    uploadedResumeIds: [],
+    analysisComplete: false,
+    resumeSkipped: false,
+    profile: null,
+    targetRoles: {{ settings.candidate_target_roles | tojson }},
+    tags: {
+        dreamCompanies: {{ settings.dream_companies | tojson }},
+        targetIndustries: {{ settings.candidate_target_industries | tojson }},
+        dealbreakers: {{ settings.candidate_dealbreakers | tojson }},
+        niceToHaves: {{ settings.candidate_nice_to_haves | tojson }},
+    },
+};
+
+// ══════════════════════════════════════════════════════════════
+// OpenRouter Model Catalog
+// ══════════════════════════════════════════════════════════════
+var OR_MODELS = [
+    { group: 'Anthropic', models: [
+        { id: 'anthropic/claude-opus-4', name: 'Claude Opus 4', tier: 'premium' },
+        { id: 'anthropic/claude-sonnet-4', name: 'Claude Sonnet 4', tier: 'smart' },
+        { id: 'anthropic/claude-haiku-4-5-20251001', name: 'Claude Haiku 4.5', tier: 'cheap' },
+    ]},
+    { group: 'Meta', models: [
+        { id: 'meta-llama/llama-3.3-70b-instruct', name: 'Llama 3.3 70B', tier: 'smart' },
+        { id: 'meta-llama/llama-3.1-8b-instruct', name: 'Llama 3.1 8B', tier: 'cheap' },
+    ]},
+    { group: 'Google', models: [
+        { id: 'google/gemini-2.5-pro-preview', name: 'Gemini 2.5 Pro', tier: 'premium' },
+        { id: 'google/gemini-2.0-flash-001', name: 'Gemini 2.0 Flash', tier: 'cheap' },
+    ]},
+    { group: 'DeepSeek', models: [
+        { id: 'deepseek/deepseek-r1', name: 'DeepSeek R1', tier: 'smart' },
+        { id: 'deepseek/deepseek-chat', name: 'DeepSeek Chat V3', tier: 'cheap' },
+    ]},
+    { group: 'OpenAI', models: [
+        { id: 'openai/gpt-4o', name: 'GPT-4o', tier: 'smart' },
+        { id: 'openai/gpt-4o-mini', name: 'GPT-4o Mini', tier: 'cheap' },
+    ]},
+    { group: 'Qwen', models: [
+        { id: 'qwen/qwen-2.5-72b-instruct', name: 'Qwen 2.5 72B', tier: 'smart' },
+        { id: 'qwen/qwen-2.5-coder-32b-instruct', name: 'Qwen 2.5 Coder 32B', tier: 'cheap' },
+    ]},
+];
+
+var GOOGLE_MODELS = [
+    { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash (Free)' },
+    { id: 'gemini-2.5-pro-preview', name: 'Gemini 2.5 Pro (Paid)' },
+];
+
+// ══════════════════════════════════════════════════════════════
+// Navigation
+// ══════════════════════════════════════════════════════════════
+function showStep(n) {
+    W.currentStep = n;
+    // Hide all steps, show current
+    document.querySelectorAll('.wizard-step').forEach(function(el) { el.classList.remove('active'); });
+    var step = document.getElementById('step-' + n);
+    if (step) step.classList.add('active');
+
+    // Update indicator
+    document.querySelectorAll('.step-dot').forEach(function(dot) {
+        var s = parseInt(dot.dataset.step);
+        dot.classList.remove('active', 'done');
+        if (s === n) dot.classList.add('active');
+        else if (s < n) dot.classList.add('done');
+    });
+    document.querySelectorAll('.step-line').forEach(function(line) {
+        var after = parseInt(line.dataset.after);
+        if (after < n) line.classList.add('done');
+        else line.classList.remove('done');
+    });
+
+    // Footer
+    document.getElementById('stepCount').textContent = 'Step ' + n + ' of ' + W.totalSteps;
+    document.getElementById('btnBack').style.visibility = n === 1 ? 'hidden' : 'visible';
+    document.getElementById('btnNext').style.display = n === W.totalSteps ? 'none' : '';
+}
+
+function goToStep(n) {
+    if (n < 1 || n > W.totalSteps) return;
+    // Can only go to steps we've visited (current or earlier)
+    if (n <= W.currentStep) showStep(n);
+}
+
+function wizardBack() {
+    if (W.currentStep > 1) showStep(W.currentStep - 1);
+}
+
+async function wizardNext() {
+    var step = W.currentStep;
+    var valid = await validateStep(step);
+    if (!valid) return;
+    await saveStep(step);
+    if (step === 3) loadStep4FromProfile();
+    if (step === 5) buildLaunchSummary();
+    if (step < W.totalSteps) showStep(step + 1);
+}
+
+// ══════════════════════════════════════════════════════════════
+// Validation
+// ══════════════════════════════════════════════════════════════
+async function validateStep(step) {
+    if (step === 1) {
+        if (!W.llmTested) {
+            showToast('Test the AI connection before proceeding.', 'error');
+            return false;
+        }
+        return true;
+    }
+    if (step === 2) {
+        if (W.uploadedResumeIds.length === 0 && !W.resumeSkipped) {
+            showToast('Upload at least one resume, or click "Skip for now".', 'error');
+            return false;
+        }
+        if (W.uploadedResumeIds.length > 0 && !W.analysisComplete && !W.resumeSkipped) {
+            showToast('Run "Analyze All Resumes" first, or click "Skip for now".', 'error');
+            return false;
+        }
+        return true;
+    }
+    if (step === 4) {
+        var loc = document.getElementById('w-location').value.trim();
+        if (!loc) { showToast('Enter your location.', 'error'); return false; }
+        if (W.targetRoles.length === 0) { showToast('Add at least one target role.', 'error'); return false; }
+        return true;
+    }
+    return true; // steps 3, 5 always pass
+}
+
+// ══════════════════════════════════════════════════════════════
+// Save Per Step
+// ══════════════════════════════════════════════════════════════
+async function saveStep(step) {
+    if (step === 1) {
+        await saveStep1();
+    } else if (step === 3) {
+        await saveProfile();
+    } else if (step === 4) {
+        await saveStep4();
+    } else if (step === 5) {
+        await saveStep5();
+    }
+}
+
+async function saveStep1() {
+    var data = { llm_provider: W.provider };
+
+    if (W.provider === 'openrouter') {
+        data.openrouter_api_key = document.getElementById('w-or-key').value;
+        data.openrouter_model = document.getElementById('w-or-model').value;
+    } else if (W.provider === 'google') {
+        data.google_api_key = document.getElementById('w-google-key').value;
+        data.google_model = document.getElementById('w-google-model').value;
+    } else if (W.provider === 'ollama') {
+        data.ollama_endpoint = document.getElementById('w-ollama-endpoint').value;
+        data.ollama_model = document.getElementById('w-ollama-model').value;
+    }
+
+    // Scoring model
+    var sp = document.getElementById('w-scoring-provider').value;
+    if (sp === 'same') {
+        data.scoring_provider = W.provider;
+        if (W.provider === 'openrouter') data.scoring_model = data.openrouter_model;
+        else if (W.provider === 'google') data.scoring_model = data.google_model;
+        else if (W.provider === 'ollama') data.scoring_model = data.ollama_model;
+    } else {
+        data.scoring_provider = sp;
+        data.scoring_model = document.getElementById('w-scoring-model').value || '';
+    }
+
+    await postJSON('/api/settings', data);
+}
+
+async function saveProfile() {
+    var data = {
+        name: document.getElementById('w-profile-name').value,
+        headline: document.getElementById('w-profile-headline').value,
+        narrative: document.getElementById('w-profile-narrative').value,
+    };
+    var strengths = document.getElementById('w-profile-strengths').value;
+    if (strengths) {
+        data.core_strengths = strengths.split(',').map(function(s) { return s.trim(); }).filter(Boolean);
+    }
+    if (W.profile) {
+        // Preserve existing fields
+        for (var k in W.profile) {
+            if (!(k in data)) data[k] = W.profile[k];
+        }
+        data.name = document.getElementById('w-profile-name').value || W.profile.name || '';
+        data.headline = document.getElementById('w-profile-headline').value || W.profile.headline || '';
+        data.narrative = document.getElementById('w-profile-narrative').value || W.profile.narrative || '';
+    }
+    await postJSON('/api/profile/candidate', data);
+}
+
+async function saveStep4() {
+    var data = {
+        candidate_location: document.getElementById('w-location').value,
+        candidate_radius_miles: parseInt(document.getElementById('w-radius').value) || 30,
+        candidate_salary_min: parseInt(document.getElementById('w-salary-min').value) || 0,
+        candidate_salary_max: parseInt(document.getElementById('w-salary-max').value) || 0,
+        candidate_work_mode: document.querySelector('input[name="w-work-mode"]:checked').value,
+        candidate_target_roles: W.targetRoles,
+    };
+    await postJSON('/api/settings', data);
+}
+
+async function saveStep5() {
+    var data = {
+        dream_companies: W.tags.dreamCompanies,
+        candidate_target_industries: W.tags.targetIndustries,
+        candidate_dealbreakers: W.tags.dealbreakers,
+        candidate_nice_to_haves: W.tags.niceToHaves,
+    };
+    await postJSON('/api/settings', data);
+}
+
+// ══════════════════════════════════════════════════════════════
+// Step 1: Provider Selection
+// ══════════════════════════════════════════════════════════════
+function selectProvider(p) {
+    W.provider = p;
+    W.llmTested = false;
+    document.getElementById('w-test-result').textContent = '';
+
+    // Update provider cards
+    document.querySelectorAll('.provider-card').forEach(function(card) {
+        card.classList.toggle('selected', card.dataset.provider === p);
+    });
+
+    // Show/hide detail panels
+    ['openrouter', 'google', 'ollama'].forEach(function(id) {
+        var el = document.getElementById('detail-' + id);
+        if (el) el.classList.toggle('active', id === p);
+    });
+
+    // Show scoring section
+    document.getElementById('scoringSection').style.display = 'block';
+
+    // Load Ollama models if needed
+    if (p === 'ollama') fetchOllamaModels();
+}
+
+function toggleVis(inputId, btn) {
+    var inp = document.getElementById(inputId);
+    if (inp.type === 'password') { inp.type = 'text'; btn.textContent = 'HIDE'; }
+    else { inp.type = 'password'; btn.textContent = 'SHOW'; }
+}
+
+// ══════════════════════════════════════════════════════════════
+// Model Dropdowns
+// ══════════════════════════════════════════════════════════════
+function populateORDropdown(selectId, savedValue) {
+    var sel = document.getElementById(selectId);
+    if (!sel) return;
+    sel.innerHTML = '<option value="">-- Select Model --</option>';
+    OR_MODELS.forEach(function(group) {
+        var optgroup = document.createElement('optgroup');
+        optgroup.label = group.group;
+        group.models.forEach(function(m) {
+            var opt = document.createElement('option');
+            opt.value = m.id;
+            var tierLabel = m.tier === 'premium' ? ' [Premium]' : m.tier === 'cheap' ? ' [Cheap]' : '';
+            opt.textContent = m.name + tierLabel;
+            if (m.id === savedValue) opt.selected = true;
+            optgroup.appendChild(opt);
+        });
+        sel.appendChild(optgroup);
+    });
+    if (savedValue && !sel.value) {
+        var opt = document.createElement('option');
+        opt.value = savedValue; opt.textContent = savedValue + ' (custom)'; opt.selected = true;
+        sel.insertBefore(opt, sel.children[1]);
+    }
+}
+
+var ollamaModelsCache = null;
+function fetchOllamaModels(callback) {
+    var endpoint = document.getElementById('w-ollama-endpoint').value || '';
+    fetch('/api/ollama/models').then(function(r) { return r.json(); }).then(function(data) {
+        if (data.ok) {
+            ollamaModelsCache = data.models;
+            populateOllamaSelect('w-ollama-model', 'w-ollama-status', data.models, '{{ settings.ollama_model }}');
+            if (callback) callback(data.models);
+        } else {
+            document.getElementById('w-ollama-status').textContent = 'Cannot reach Ollama: ' + (data.error || '');
+            document.getElementById('w-ollama-status').style.color = '#f87171';
+            if (callback) callback(null);
+        }
+    }).catch(function() {
+        document.getElementById('w-ollama-status').textContent = 'Ollama offline';
+        document.getElementById('w-ollama-status').style.color = '#f87171';
+        if (callback) callback(null);
+    });
+}
+
+function populateOllamaSelect(selectId, statusId, models, savedValue) {
+    var sel = document.getElementById(selectId);
+    sel.innerHTML = '';
+    models.forEach(function(m) {
+        var opt = document.createElement('option');
+        opt.value = m.name;
+        opt.textContent = m.name + ' (' + m.size_gb + ' GB)';
+        if (m.name === savedValue) opt.selected = true;
+        sel.appendChild(opt);
+    });
+    if (savedValue && !sel.value) {
+        var opt = document.createElement('option');
+        opt.value = savedValue; opt.textContent = savedValue + ' (saved)'; opt.selected = true;
+        sel.insertBefore(opt, sel.firstChild);
+    }
+    if (statusId) {
+        var status = document.getElementById(statusId);
+        status.textContent = models.length + ' models available';
+        status.style.color = '#4ade80';
+    }
+}
+
+function updateScoringModels() {
+    var sp = document.getElementById('w-scoring-provider').value;
+    var sel = document.getElementById('w-scoring-model');
+    if (sp === 'same') {
+        sel.innerHTML = '<option value="">Same as main model</option>';
+    } else if (sp === 'openrouter') {
+        populateORDropdown('w-scoring-model', '');
+    } else if (sp === 'google') {
+        sel.innerHTML = '';
+        GOOGLE_MODELS.forEach(function(m) {
+            var opt = document.createElement('option');
+            opt.value = m.id; opt.textContent = m.name;
+            sel.appendChild(opt);
+        });
+    } else if (sp === 'ollama') {
+        if (ollamaModelsCache) {
+            populateOllamaSelect('w-scoring-model', null, ollamaModelsCache, '');
+        } else {
+            sel.innerHTML = '<option value="">Ollama offline</option>';
+        }
+    }
+}
+
+// ══════════════════════════════════════════════════════════════
+// Step 1: Test LLM Connection
+// ══════════════════════════════════════════════════════════════
+async function testLLMConnection() {
+    var result = document.getElementById('w-test-result');
+    var btn = document.getElementById('btnTestLLM');
+    result.textContent = 'Saving settings...';
+    result.className = 'test-result';
+    btn.disabled = true;
+
+    // Save settings first
+    await saveStep1();
+
+    result.textContent = 'Testing connection...';
+    try {
+        var resp = await fetch('/api/test-llm', { method: 'POST' });
+        var data = await resp.json();
+        if (data.ok) {
+            W.llmTested = true;
+            result.textContent = 'Connected! ' + (data.response || '').substring(0, 50);
+            result.className = 'test-result success';
+        } else {
+            result.textContent = data.error || 'Connection failed';
+            result.className = 'test-result error';
+        }
+    } catch (err) {
+        result.textContent = 'Request failed: ' + err.message;
+        result.className = 'test-result error';
+    }
+    btn.disabled = false;
+}
+
+// Reset llmTested when provider inputs change
+document.addEventListener('input', function(e) {
+    var id = e.target.id || '';
+    if (id.startsWith('w-or-') || id.startsWith('w-google-') || id.startsWith('w-ollama-')) {
+        W.llmTested = false;
+        document.getElementById('w-test-result').textContent = '';
+    }
+});
+
+// ══════════════════════════════════════════════════════════════
+// Step 2: File Upload
+// ══════════════════════════════════════════════════════════════
+var dropZone = document.getElementById('dropZone');
+var fileInput = document.getElementById('fileInput');
+
+dropZone.addEventListener('dragover', function(e) {
+    e.preventDefault(); dropZone.classList.add('drag-over');
+});
+dropZone.addEventListener('dragleave', function() {
+    dropZone.classList.remove('drag-over');
+});
+dropZone.addEventListener('drop', function(e) {
+    e.preventDefault(); dropZone.classList.remove('drag-over');
+    handleFiles(e.dataTransfer.files);
+});
+fileInput.addEventListener('change', function() {
+    handleFiles(fileInput.files);
+});
+
+async function handleFiles(files) {
+    for (var i = 0; i < files.length; i++) {
+        await uploadFile(files[i]);
+    }
+    document.getElementById('btnAnalyze').disabled = (W.uploadedResumeIds.length === 0);
+}
+
+async function uploadFile(file) {
+    var formData = new FormData();
+    formData.append('file', file);
+    try {
+        var resp = await fetch('/api/resumes/upload', { method: 'POST', body: formData });
+        var data = await resp.json();
+        if (data.ok) {
+            W.uploadedResumeIds.push(data.id);
+            addUploadedFileRow(data.filename || file.name, data.id);
+        } else {
+            showToast('Upload failed: ' + (data.error || 'Unknown error'), 'error');
+        }
+    } catch (err) {
+        showToast('Upload failed: ' + err.message, 'error');
+    }
+}
+
+function addUploadedFileRow(name, id) {
+    var container = document.getElementById('uploadedFiles');
+    var div = document.createElement('div');
+    div.className = 'uploaded-file';
+    div.id = 'file-' + id;
+    div.innerHTML = '<span class="file-name">' + escapeHtml(name) + '</span>' +
+                    '<span class="file-status pending">Pending analysis</span>';
+    container.appendChild(div);
+}
+
+async function analyzeAll() {
+    var btn = document.getElementById('btnAnalyze');
+    var prog = document.getElementById('analysisProgress');
+    var resultEl = document.getElementById('w-analysis-result');
+    btn.disabled = true;
+    prog.style.display = 'block';
+    resultEl.textContent = '';
+
+    try {
+        var resp = await fetch('/api/resumes/analyze-all', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ force: false }),
+        });
+        var data = await resp.json();
+        W.analysisComplete = true;
+        prog.style.display = 'none';
+
+        // Update file statuses
+        document.querySelectorAll('.uploaded-file .file-status').forEach(function(el) {
+            el.textContent = 'Analyzed'; el.className = 'file-status ok';
+        });
+
+        var msg = 'Analyzed ' + (data.analyzed || 0) + ' resume(s).';
+        if (data.profile && data.profile.name) {
+            msg += ' Profile built for ' + data.profile.name + '.';
+        }
+        resultEl.textContent = msg;
+        resultEl.className = 'test-result success';
+    } catch (err) {
+        prog.style.display = 'none';
+        resultEl.textContent = 'Analysis failed: ' + err.message;
+        resultEl.className = 'test-result error';
+        btn.disabled = false;
+    }
+}
+
+function skipResumes() {
+    W.resumeSkipped = true;
+    showToast('Skipped resume upload. You can add them later on the Arsenal page.', 'success');
+}
+
+// ══════════════════════════════════════════════════════════════
+// Step 3: Profile Loading
+// ══════════════════════════════════════════════════════════════
+async function loadProfile() {
+    try {
+        var resp = await fetch('/api/profile');
+        if (resp.ok) {
+            W.profile = await resp.json();
+            document.getElementById('w-profile-name').value = W.profile.name || '';
+            document.getElementById('w-profile-headline').value = W.profile.headline || '';
+            document.getElementById('w-profile-narrative').value = W.profile.narrative || '';
+            if (W.profile.core_strengths && Array.isArray(W.profile.core_strengths)) {
+                document.getElementById('w-profile-strengths').value = W.profile.core_strengths.join(', ');
+            }
+            // Seed target roles from profile if we don't have any yet
+            if (W.targetRoles.length === 0 && W.profile.target_roles) {
+                W.targetRoles = W.profile.target_roles.slice(0, 5);
+            }
+        }
+    } catch (e) { /* no profile yet — that's fine */ }
+}
+
+function loadStep4FromProfile() {
+    renderRoles();
+}
+
+// ══════════════════════════════════════════════════════════════
+// Step 4: Target Roles
+// ══════════════════════════════════════════════════════════════
+function renderRoles() {
+    var list = document.getElementById('roleList');
+    list.innerHTML = '';
+    W.targetRoles.forEach(function(role, i) {
+        var div = document.createElement('div');
+        div.className = 'role-item';
+        div.innerHTML =
+            '<span class="role-rank">#' + (i + 1) + '</span>' +
+            '<span class="role-text">' + escapeHtml(role) + '</span>' +
+            '<div class="role-controls">' +
+            '<button onclick="moveRole(' + i + ',-1)" title="Move up">&uarr;</button>' +
+            '<button onclick="moveRole(' + i + ',1)" title="Move down">&darr;</button>' +
+            '<button onclick="removeRole(' + i + ')" title="Remove" style="color:#f87171">&times;</button>' +
+            '</div>';
+        list.appendChild(div);
+    });
+}
+
+function addRole() {
+    var input = document.getElementById('roleInput');
+    var val = input.value.trim();
+    if (!val) return;
+    W.targetRoles.push(val);
+    input.value = '';
+    renderRoles();
+}
+
+function removeRole(i) {
+    W.targetRoles.splice(i, 1);
+    renderRoles();
+}
+
+function moveRole(i, dir) {
+    var j = i + dir;
+    if (j < 0 || j >= W.targetRoles.length) return;
+    var tmp = W.targetRoles[i];
+    W.targetRoles[i] = W.targetRoles[j];
+    W.targetRoles[j] = tmp;
+    renderRoles();
+}
+
+// ══════════════════════════════════════════════════════════════
+// Step 5: Tag Inputs
+// ══════════════════════════════════════════════════════════════
+function focusTagInput(wrapper) {
+    wrapper.querySelector('input').focus();
+}
+
+function handleTagKey(e, tagGroup, color) {
+    if (e.key === 'Enter' || e.key === ',') {
+        e.preventDefault();
+        var val = e.target.value.trim().replace(/,$/, '');
+        if (!val) return;
+        W.tags[tagGroup].push(val);
+        e.target.value = '';
+        renderTags(tagGroup, color);
+    } else if (e.key === 'Backspace' && e.target.value === '' && W.tags[tagGroup].length > 0) {
+        W.tags[tagGroup].pop();
+        renderTags(tagGroup, color);
+    }
+}
+
+function renderTags(tagGroup, color) {
+    var wrapper = document.getElementById(tagGroup + 'Wrap');
+    var input = wrapper.querySelector('input');
+    // Remove old pills
+    wrapper.querySelectorAll('.tag-pill').forEach(function(p) { p.remove(); });
+    // Add current tags
+    W.tags[tagGroup].forEach(function(tag, i) {
+        var pill = document.createElement('span');
+        pill.className = 'tag-pill ' + color;
+        pill.innerHTML = escapeHtml(tag) + ' <span class="tag-remove" onclick="removeTag(\'' + tagGroup + '\',' + i + ',\'' + color + '\')">&times;</span>';
+        wrapper.insertBefore(pill, input);
+    });
+}
+
+function removeTag(tagGroup, i, color) {
+    W.tags[tagGroup].splice(i, 1);
+    renderTags(tagGroup, color);
+}
+
+// ══════════════════════════════════════════════════════════════
+// Step 6: Launch
+// ══════════════════════════════════════════════════════════════
+function buildLaunchSummary() {
+    var provider = W.provider;
+    var providerLabel = provider === 'openrouter' ? 'OpenRouter' : provider === 'google' ? 'Google Gemini' : 'Ollama';
+    var resumeCount = W.uploadedResumeIds.length;
+    var location = document.getElementById('w-location').value || 'Not set';
+    var roles = W.targetRoles.length;
+
+    document.getElementById('launchSummary').innerHTML =
+        summaryItem('AI Provider', providerLabel) +
+        summaryItem('Resumes', resumeCount + ' uploaded') +
+        summaryItem('Location', location) +
+        summaryItem('Target Roles', roles + ' configured');
+
+    // Generate search profiles
+    var profiles = [];
+    var loc = document.getElementById('w-location').value || '';
+    var radius = parseInt(document.getElementById('w-radius').value) || 30;
+    var salMin = parseInt(document.getElementById('w-salary-min').value) || 0;
+
+    W.targetRoles.slice(0, 5).forEach(function(role) {
+        profiles.push({
+            name: role + (loc ? ' — ' + loc.split(',')[0] : ''),
+            query: role,
+            location: loc,
+            radius_miles: radius,
+            salary_min: salMin,
+            boards: ['indeed', 'simplyhired'],
+            enabled: true,
+        });
+    });
+
+    var previewEl = document.getElementById('searchProfilesPreview');
+    previewEl.innerHTML = '';
+    profiles.forEach(function(p) {
+        var div = document.createElement('div');
+        div.className = 'search-profile-preview';
+        div.innerHTML = '<div class="sp-name">' + escapeHtml(p.name) + '</div>' +
+                        '<div class="sp-meta">"' + escapeHtml(p.query) + '" in ' + escapeHtml(p.location) + ' (' + p.radius_miles + ' mi)</div>';
+        previewEl.appendChild(div);
+    });
+
+    // Store for launch
+    W.searchProfiles = profiles;
+
+    // Board checkboxes
+    var boardsEl = document.getElementById('launchBoards');
+    var allBoards = [
+        ['indeed', 'Indeed'],
+        ['simplyhired', 'SimplyHired'],
+        ['rigzone', 'Rigzone'],
+        ['dice', 'Dice'],
+        ['remoteok', 'RemoteOK'],
+        ['weworkremotely', 'We Work Remotely'],
+        ['ziprecruiter', 'ZipRecruiter'],
+        ['usajobs', 'USAJobs'],
+    ];
+    var defaultEnabled = ['indeed', 'simplyhired'];
+    boardsEl.innerHTML = '';
+    allBoards.forEach(function(b) {
+        var checked = defaultEnabled.indexOf(b[0]) >= 0 ? ' checked' : '';
+        boardsEl.innerHTML +=
+            '<label class="board-check-item">' +
+            '<input type="checkbox" name="launch-board" value="' + b[0] + '"' + checked + '>' +
+            '<span>' + b[1] + '</span></label>';
+    });
+}
+
+function summaryItem(label, value) {
+    return '<div class="summary-item">' +
+           '<div class="summary-label">' + label + '</div>' +
+           '<div class="summary-value">' + escapeHtml(value) + '</div>' +
+           '</div>';
+}
+
+async function launchSetup() {
+    var btn = document.getElementById('btnLaunch');
+    btn.disabled = true;
+    btn.textContent = 'Launching...';
+
+    // Collect enabled boards
+    var enabledBoards = [];
+    document.querySelectorAll('input[name="launch-board"]:checked').forEach(function(cb) {
+        enabledBoards.push(cb.value);
+    });
+
+    // Update search profile boards to match selected boards
+    (W.searchProfiles || []).forEach(function(p) {
+        p.boards = enabledBoards;
+    });
+
+    // Save everything
+    var data = {
+        search_profiles: W.searchProfiles || [],
+        enabled_boards: enabledBoards,
+        dream_companies: W.tags.dreamCompanies,
+        setup_complete: true,
+    };
+
+    try {
+        await postJSON('/api/settings', data);
+    } catch (err) {
+        showToast('Failed to save settings: ' + err.message, 'error');
+        btn.disabled = false;
+        btn.textContent = 'Launch JobHunter3000';
+        return;
+    }
+
+    // Optionally run first scan
+    var runScan = document.getElementById('runFirstScan').checked;
+    if (runScan) {
+        btn.textContent = 'Running first scan...';
+        try {
+            await fetch('/api/scraper/run', { method: 'POST' });
+        } catch (e) {
+            // Scrape failure is non-fatal
+        }
+    }
+
+    window.location.href = '/dashboard';
+}
+
+// ══════════════════════════════════════════════════════════════
+// Utilities
+// ══════════════════════════════════════════════════════════════
+async function postJSON(url, data) {
+    var resp = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+    });
+    return await resp.json();
+}
+
+function escapeHtml(str) {
+    var div = document.createElement('div');
+    div.textContent = str || '';
+    return div.innerHTML;
+}
+
+function showToast(message, type) {
+    var container = document.getElementById('toast-container');
+    var toast = document.createElement('div');
+    toast.className = 'toast toast-' + (type || 'success');
+    toast.textContent = message;
+    container.appendChild(toast);
+    setTimeout(function() {
+        toast.style.animation = 'toast-out 0.3s ease forwards';
+        setTimeout(function() { toast.remove(); }, 300);
+    }, 4000);
+}
+
+// ══════════════════════════════════════════════════════════════
+// Init
+// ══════════════════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', function() {
+    // Populate dropdowns
+    populateORDropdown('w-or-model', '{{ settings.openrouter_model }}');
+
+    // Pre-select current provider
+    if (W.provider && W.provider !== 'openrouter') {
+        selectProvider(W.provider);
+    } else {
+        // Default: don't pre-select if no provider configured meaningfully
+        var hasKey = '{{ "yes" if settings.openrouter_api_key else "no" }}';
+        if (hasKey === 'yes') {
+            selectProvider('openrouter');
+        }
+    }
+
+    // Load existing profile
+    loadProfile();
+
+    // Render existing tags
+    renderTags('dreamCompanies', 'blue');
+    renderTags('targetIndustries', 'blue');
+    renderTags('dealbreakers', 'red');
+    renderTags('niceToHaves', 'green');
+
+    // Render existing roles
+    renderRoles();
+
+    // Load existing resumes count
+    fetch('/api/resumes').then(function(r) { return r.json(); }).then(function(resumes) {
+        if (resumes && resumes.length > 0) {
+            resumes.forEach(function(r) {
+                W.uploadedResumeIds.push(r.id);
+                addUploadedFileRow(r.original_name || r.filename || 'Resume', r.id);
+                // Mark as analyzed if analysis exists
+                if (r.analysis) {
+                    var statusEl = document.querySelector('#file-' + r.id + ' .file-status');
+                    if (statusEl) { statusEl.textContent = 'Analyzed'; statusEl.className = 'file-status ok'; }
+                    W.analysisComplete = true;
+                }
+            });
+            document.getElementById('btnAnalyze').disabled = false;
+        }
+    }).catch(function() {});
+});
+</script>
+
+</body>
+</html>

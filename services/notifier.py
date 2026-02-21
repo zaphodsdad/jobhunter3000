@@ -37,16 +37,28 @@ def send_notification(title: str, message: str, settings: dict,
         return {"ok": False, "error": str(e)}
 
 
+def is_dream_company(job: dict, settings: dict) -> bool:
+    """Check if a job's company matches any dream company (case-insensitive partial match)."""
+    company = (job.get("company") or "").lower()
+    if not company:
+        return False
+    for dream in settings.get("dream_companies", []):
+        if dream and dream.lower() in company:
+            return True
+    return False
+
+
 def notify_job_match(job: dict, score_data: dict, settings: dict) -> dict:
-    """Send a notification for a high-scoring job match."""
+    """Send a notification for a high-scoring job match or dream company match."""
     score = score_data.get("score", 0)
     notify_threshold = settings.get("notify_threshold", 60)
     priority_threshold = settings.get("priority_threshold", 80)
+    dream = is_dream_company(job, settings)
 
-    if score < notify_threshold:
+    if score < notify_threshold and not dream:
         return {"ok": False, "reason": "below_threshold"}
 
-    priority = 1 if score >= priority_threshold else 0
+    priority = 1 if score >= priority_threshold or dream else 0
 
     pros = score_data.get("pros", [])
     cons = score_data.get("cons", [])
@@ -66,7 +78,8 @@ def notify_job_match(job: dict, score_data: dict, settings: dict) -> dict:
         lines.append("")
         lines.append(fit)
 
-    title = f"JobHunter3000: {score}/100"
+    prefix = "[Dream Company] " if dream else ""
+    title = f"{prefix}JobHunter3000: {score}/100"
     message = "\n".join(lines)
     url = job.get("url", "")
 

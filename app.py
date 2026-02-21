@@ -23,6 +23,23 @@ app = FastAPI(title="JobHunter3000")
 templates = Jinja2Templates(directory="templates")
 
 
+def _is_setup_complete(settings: dict) -> bool:
+    """Check if the initial setup wizard has been completed."""
+    if settings.get("setup_complete"):
+        return True
+    # Fallback: treat as complete if user configured manually before wizard existed
+    ollama_ep = settings.get("ollama_endpoint") or ""
+    has_llm = bool(
+        settings.get("openrouter_api_key")
+        or settings.get("google_api_key")
+        or (ollama_ep and ollama_ep != "http://localhost:11434")
+    )
+    has_profile = os.path.exists(
+        os.path.join(os.path.dirname(__file__), "data", "candidate_profile.json")
+    )
+    return has_llm and has_profile
+
+
 # ---------------------------------------------------------------------------
 # Startup
 # ---------------------------------------------------------------------------
@@ -48,8 +65,21 @@ async def root(request: Request):
     return RedirectResponse(url="/dashboard", status_code=302)
 
 
+@app.get("/setup", response_class=HTMLResponse)
+async def setup_page(request: Request):
+    """Setup wizard — first-run onboarding or reconfiguration."""
+    settings = load_settings()
+    return templates.TemplateResponse("setup.html", {
+        "request": request,
+        "settings": settings,
+    })
+
+
 @app.get("/dashboard", response_class=HTMLResponse)
 async def dashboard(request: Request):
+    settings = load_settings()
+    if not _is_setup_complete(settings):
+        return RedirectResponse(url="/setup", status_code=302)
     from services.resumes import validate_candidate_profile
     conn = get_db()
     stats = get_dashboard_stats(conn)
@@ -495,6 +525,26 @@ async def api_get_settings():
     return JSONResponse(settings)
 
 
+@app.post("/api/settings")
+async def api_save_settings(request: Request):
+    """Save settings via JSON (used by setup wizard and JS clients)."""
+    data = await request.json()
+
+    # Handle numeric coercion same as form handler
+    for field in ("notify_threshold", "priority_threshold", "max_days_old",
+                  "scrape_interval_hours", "display_min_score",
+                  "candidate_radius_miles", "candidate_salary_min",
+                  "candidate_salary_max", "candidate_willing_to_travel"):
+        if field in data:
+            try:
+                data[field] = int(data[field])
+            except (ValueError, TypeError):
+                pass
+
+    save_settings(data)
+    return JSONResponse({"ok": True})
+
+
 @app.post("/api/test-llm")
 async def api_test_llm():
     """Test the LLM connection."""
@@ -836,21 +886,24 @@ async def api_run_scraper():
         except Exception as e:
             scored["errors"].append(str(e))
 
-        # Send notifications for high-scoring new jobs
+        # Send notifications for high-scoring new jobs + dream company matches
         notified = 0
         try:
-            from services.notifier import notify_job_match
+            from services.notifier import notify_job_match, is_dream_company
             notify_conn = get_db()
             # Get jobs scored above notify threshold that haven't been notified
             threshold = settings.get("notify_threshold", 60)
             rows = notify_conn.execute(
-                "SELECT * FROM jobs WHERE score >= ? AND notified = 0",
-                (threshold,),
+                "SELECT * FROM jobs WHERE score IS NOT NULL AND notified = 0",
             ).fetchall()
             for row in rows:
                 job = dict(row)
+                score = job.get("score", 0) or 0
+                # Skip if below threshold AND not a dream company
+                if score < threshold and not is_dream_company(job, settings):
+                    continue
                 score_data = {
-                    "score": job.get("score", 0),
+                    "score": score,
                     "pros": json.loads(job.get("pros", "[]") or "[]"),
                     "cons": json.loads(job.get("cons", "[]") or "[]"),
                     "fit_summary": job.get("fit_summary", ""),

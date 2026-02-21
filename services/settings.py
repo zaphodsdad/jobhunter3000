@@ -128,6 +128,9 @@ DEFAULTS = {
     "candidate_willing_to_travel": 10,      # max travel percentage
     "candidate_elevator_pitch": "",         # short pitch for cover letters / outreach
     "candidate_technical_projects": "",     # homelab, infrastructure, side projects (freeform)
+    # Setup wizard
+    "setup_complete": False,
+    "dream_companies": [],                  # Watchlist — alert on ANY job from these companies
 }
 
 

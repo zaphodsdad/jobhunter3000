@@ -327,6 +327,23 @@ def upsert_job(conn: sqlite3.Connection, job_data: dict) -> int:
     return cursor.lastrowid
 
 
+def bulk_update_status(conn: sqlite3.Connection, job_ids: list[int], new_status: str) -> int:
+    """Update status for multiple jobs at once. Returns count of updated rows."""
+    valid_statuses = {"new", "interested", "applied", "interviewing", "rejected", "offer", "accepted", "archived"}
+    if new_status not in valid_statuses or not job_ids:
+        return 0
+
+    now = datetime.now().isoformat()
+    placeholders = ",".join("?" * len(job_ids))
+    params = [new_status, now] + job_ids
+    cursor = conn.execute(
+        f"UPDATE jobs SET status = ?, updated_at = ? WHERE id IN ({placeholders})",
+        params,
+    )
+    conn.commit()
+    return cursor.rowcount
+
+
 def get_sources(conn: sqlite3.Connection) -> list[str]:
     """Get distinct job sources."""
     rows = conn.execute("SELECT DISTINCT source FROM jobs ORDER BY source").fetchall()

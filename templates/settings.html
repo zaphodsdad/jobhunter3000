@@ -315,6 +315,14 @@
                        value="{{ settings.display_min_score }}"
                        min="0" max="100" step="5">
             </div>
+
+            <div class="form-group">
+                <label for="auto_archive_threshold">Auto-Archive Jobs Below Score (0 = disabled)</label>
+                <input type="number" id="auto_archive_threshold" name="auto_archive_threshold"
+                       value="{{ settings.auto_archive_threshold }}"
+                       min="0" max="100" step="5">
+                <div class="model-status">Newly scored jobs below this are auto-archived. Does not affect favorites or jobs already in your pipeline.</div>
+            </div>
         </div>
 
         <!-- ════════════════════════════════════════════════════

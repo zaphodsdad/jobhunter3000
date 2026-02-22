@@ -241,6 +241,18 @@ def score_jobs(conn, settings: dict = None, job_ids: list = None, force: bool = 
         except Exception as e:
             results["errors"].append(f"Job {job['id']} ({job.get('title', '?')}): {str(e)}")
 
+    # Auto-archive low-scoring new jobs (if threshold is set)
+    auto_threshold = settings.get("auto_archive_threshold", 0)
+    if auto_threshold > 0 and results["scored"] > 0:
+        cursor = conn.execute(
+            """UPDATE jobs SET status = 'archived', updated_at = datetime('now')
+               WHERE score IS NOT NULL AND score < ?
+               AND status = 'new' AND is_favorite = 0""",
+            (auto_threshold,),
+        )
+        conn.commit()
+        results["auto_archived"] = cursor.rowcount
+
     return results
 
 

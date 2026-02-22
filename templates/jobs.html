@@ -407,6 +407,120 @@
       border-color: rgba(251, 191, 36, 0.4);
     }
 
+    /* ── Bulk Action Bar ────────────────────────────────── */
+    .bulk-bar {
+      display: none;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.65rem 1rem;
+      background: rgba(0, 229, 255, 0.06);
+      border: 1px solid rgba(0, 229, 255, 0.2);
+      border-radius: 8px;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .bulk-bar.visible {
+      display: flex;
+    }
+
+    .bulk-bar .bulk-count {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #00e5ff;
+      margin-right: 0.5rem;
+    }
+
+    .bulk-bar button {
+      background: rgba(239, 68, 68, 0.12);
+      color: #f87171;
+      border: 1px solid rgba(239, 68, 68, 0.25);
+      border-radius: 6px;
+      padding: 0.35rem 0.85rem;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .bulk-bar button:hover {
+      background: rgba(239, 68, 68, 0.2);
+      border-color: #f87171;
+    }
+
+    .bulk-bar .bulk-score-group {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      margin-left: 0.5rem;
+    }
+
+    .bulk-bar .bulk-score-group label {
+      font-size: 0.78rem;
+      color: #6b7280;
+      text-transform: none;
+      letter-spacing: 0;
+    }
+
+    .bulk-bar .bulk-score-input {
+      width: 52px;
+      background: #111318;
+      color: #e2e8f0;
+      border: 1px solid #2a2f3e;
+      border-radius: 5px;
+      padding: 0.3rem 0.45rem;
+      font-size: 0.82rem;
+      text-align: center;
+      outline: none;
+    }
+
+    .bulk-bar .bulk-score-input:focus {
+      border-color: #00e5ff;
+    }
+
+    .bulk-bar .bulk-score-btn {
+      background: rgba(0, 229, 255, 0.12);
+      color: #00e5ff;
+      border: 1px solid rgba(0, 229, 255, 0.25);
+    }
+
+    .bulk-bar .bulk-score-btn:hover {
+      background: rgba(0, 229, 255, 0.2);
+      border-color: #00e5ff;
+    }
+
+    .bulk-bar .bulk-clear {
+      background: none;
+      border: none;
+      color: #6b7280;
+      font-size: 0.78rem;
+      cursor: pointer;
+      text-decoration: underline;
+      padding: 0.35rem 0.5rem;
+    }
+
+    .bulk-bar .bulk-clear:hover {
+      color: #e2e8f0;
+    }
+
+    /* ── Row Checkbox ──────────────────────────────────── */
+    .row-checkbox {
+      accent-color: #00e5ff;
+      width: 15px;
+      height: 15px;
+      cursor: pointer;
+      vertical-align: middle;
+      margin-right: 6px;
+    }
+
+    .select-all-cb {
+      accent-color: #00e5ff;
+      width: 15px;
+      height: 15px;
+      cursor: pointer;
+      vertical-align: middle;
+    }
+
     /* ── Empty State ───────────────────────────────────── */
     .empty-state {
       text-align: center;
@@ -516,12 +630,26 @@
       <span id="qs-status" class="qs-status"></span>
     </div>
 
+    <!-- Bulk Action Bar -->
+    <div class="bulk-bar" id="bulkBar">
+      <span class="bulk-count" id="bulkCount">0 selected</span>
+      <button onclick="bulkArchive()">Archive Selected</button>
+      <div class="bulk-score-group">
+        <label>Select below score</label>
+        <input type="number" class="bulk-score-input" id="bulkScoreInput" min="0" max="100" step="5" value="45"
+               onkeydown="if(event.key==='Enter'){event.preventDefault();selectBelowScore();}">
+        <button class="bulk-score-btn" onclick="selectBelowScore()">Go</button>
+      </div>
+      <button class="bulk-clear" onclick="clearSelection()">Clear</button>
+    </div>
+
     <!-- Jobs Table -->
     {% if jobs | length > 0 %}
     <div class="jobs-table-wrap">
       <table class="jobs-table">
         <thead>
           <tr>
+            <th style="width:30px;"><input type="checkbox" class="select-all-cb" id="selectAllCb" onclick="toggleSelectAll()" title="Select all visible"></th>
             <th class="sortable {% if current_sort == 'score' %}sorted{% endif %}" onclick="sortBy('score')">
               Score <span class="sort-arrow">{% if current_sort == 'score' %}{{ '&#9650;' if current_order == 'asc' else '&#9660;' }}{% else %}&#9660;{% endif %}</span>
             </th>
@@ -545,7 +673,10 @@
         </thead>
         <tbody>
           {% for job in jobs %}
-          <tr class="job-row {% if job.is_favorite %}favorited{% endif %}" id="row-{{ job.id }}" onclick="openJob({{ job.id }}, event)">
+          <tr class="job-row {% if job.is_favorite %}favorited{% endif %}" id="row-{{ job.id }}" onclick="openJob({{ job.id }}, event)" data-score="{{ job.score if job.score is not none else '' }}">
+            <td onclick="event.stopPropagation()">
+              <input type="checkbox" class="row-checkbox" data-job-id="{{ job.id }}" onclick="toggleRowSelect(event)">
+            </td>
             <td>
               <span class="fav-star {% if job.is_favorite %}active{% else %}inactive{% endif %}" data-job-id="{{ job.id }}" onclick="toggleFavorite({{ job.id }}, event)">{% if job.is_favorite %}&#9733;{% else %}&#9734;{% endif %}</span>
               {% if job.score is not none %}
@@ -767,6 +898,95 @@
         params.set('favorites', '1');
       }
       window.location.href = '/jobs' + (params.toString() ? '?' + params.toString() : '');
+    }
+
+    /* ── Bulk Selection ──────────────────────────────────── */
+    function getSelectedIds() {
+      var ids = [];
+      document.querySelectorAll('.row-checkbox:checked').forEach(function(cb) {
+        ids.push(parseInt(cb.getAttribute('data-job-id')));
+      });
+      return ids;
+    }
+
+    function updateBulkBar() {
+      var ids = getSelectedIds();
+      var bar = document.getElementById('bulkBar');
+      var count = document.getElementById('bulkCount');
+      if (ids.length > 0) {
+        bar.classList.add('visible');
+        count.textContent = ids.length + ' selected';
+      } else {
+        bar.classList.remove('visible');
+      }
+      var allCb = document.getElementById('selectAllCb');
+      var allBoxes = document.querySelectorAll('.row-checkbox');
+      if (allBoxes.length > 0 && ids.length === allBoxes.length) {
+        allCb.checked = true;
+        allCb.indeterminate = false;
+      } else if (ids.length > 0) {
+        allCb.checked = false;
+        allCb.indeterminate = true;
+      } else {
+        allCb.checked = false;
+        allCb.indeterminate = false;
+      }
+    }
+
+    function toggleSelectAll() {
+      var allCb = document.getElementById('selectAllCb');
+      var boxes = document.querySelectorAll('.row-checkbox');
+      boxes.forEach(function(cb) { cb.checked = allCb.checked; });
+      updateBulkBar();
+    }
+
+    function toggleRowSelect(event) {
+      updateBulkBar();
+    }
+
+    function selectBelowScore() {
+      var threshold = parseInt(document.getElementById('bulkScoreInput').value);
+      if (isNaN(threshold)) return;
+      document.querySelectorAll('tr.job-row').forEach(function(row) {
+        var scoreStr = row.getAttribute('data-score');
+        var cb = row.querySelector('.row-checkbox');
+        if (!cb) return;
+        if (scoreStr !== '' && parseInt(scoreStr) < threshold) {
+          cb.checked = true;
+        }
+      });
+      updateBulkBar();
+    }
+
+    function clearSelection() {
+      document.querySelectorAll('.row-checkbox').forEach(function(cb) { cb.checked = false; });
+      document.getElementById('selectAllCb').checked = false;
+      document.getElementById('selectAllCb').indeterminate = false;
+      updateBulkBar();
+    }
+
+    function bulkArchive() {
+      var ids = getSelectedIds();
+      if (ids.length === 0) return;
+      if (!confirm('Archive ' + ids.length + ' job' + (ids.length > 1 ? 's' : '') + '?')) return;
+      fetch('/api/jobs/bulk-status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ job_ids: ids, status: 'archived' })
+      })
+      .then(function(resp) { return resp.json(); })
+      .then(function(data) {
+        if (!data.ok) return;
+        ids.forEach(function(id) {
+          var row = document.getElementById('row-' + id);
+          if (row) {
+            row.style.transition = 'opacity 0.4s';
+            row.style.opacity = '0';
+            setTimeout(function() { row.remove(); updateJobCount(); }, 400);
+          }
+        });
+        clearSelection();
+      });
     }
 
     /* ── Inline Status Change (table) ──────────────────── */

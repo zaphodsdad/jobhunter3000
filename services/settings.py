@@ -21,6 +21,7 @@ DEFAULTS = {
     "pushover_user_key": "",
     "pushover_api_token": "",
     "notify_threshold": 60,
+    "auto_archive_threshold": 0,          # 0 = disabled; auto-archive new jobs scoring below this
     "priority_threshold": 80,
     "scrape_interval_hours": 8,
     "search_profiles": [

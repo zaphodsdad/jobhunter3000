@@ -15,8 +15,8 @@ import uvicorn
 from services.settings import load_settings, save_settings
 from services.db import (
     get_db, ensure_tables, get_dashboard_stats, get_jobs, get_job,
-    update_job_status, update_job, get_sources, get_statuses,
-    get_search_queries, get_followups_due,
+    update_job_status, update_job, bulk_update_status,
+    get_sources, get_statuses, get_search_queries, get_followups_due,
 )
 
 app = FastAPI(title="JobHunter3000")
@@ -443,7 +443,8 @@ async def save_settings_route(request: Request):
 
     # Handle numeric fields
     for field in ("notify_threshold", "priority_threshold", "max_days_old",
-                  "scrape_interval_hours", "display_min_score"):
+                  "scrape_interval_hours", "display_min_score",
+                  "auto_archive_threshold"):
         if field in data:
             try:
                 data[field] = int(data[field])
@@ -659,6 +660,22 @@ async def api_update_status(job_id: int, request: Request):
     return JSONResponse({"ok": True, "status": new_status})
 
 
+@app.post("/api/jobs/bulk-status")
+async def api_bulk_status(request: Request):
+    """Update status for multiple jobs at once."""
+    body = await request.json()
+    job_ids = body.get("job_ids", [])
+    new_status = (body.get("status") or "").strip()
+    if not job_ids or not new_status:
+        return JSONResponse({"error": "job_ids and status are required"}, status_code=400)
+    conn = get_db()
+    updated = bulk_update_status(conn, job_ids, new_status)
+    conn.close()
+    if updated == 0:
+        return JSONResponse({"error": "Invalid status or no matching jobs"}, status_code=400)
+    return JSONResponse({"ok": True, "updated": updated})
+
+
 @app.delete("/api/jobs/{job_id}")
 async def api_delete_job(job_id: int):
     """Delete a job from the database."""
@@ -731,6 +748,7 @@ async def api_save_settings(request: Request):
     # Handle numeric coercion same as form handler
     for field in ("notify_threshold", "priority_threshold", "max_days_old",
                   "scrape_interval_hours", "display_min_score",
+                  "auto_archive_threshold",
                   "candidate_radius_miles", "candidate_salary_min",
                   "candidate_salary_max", "candidate_willing_to_travel"):
         if field in data:

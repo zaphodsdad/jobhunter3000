@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <!-- State: Idle -->
+  <div id="state-idle" class="state">
+    <div class="header">
+      <div class="logo">JH<span class="accent">3000</span></div>
+      <div id="connection-status" class="status-dot"></div>
+    </div>
+    <div id="site-info" class="site-info">Detecting page...</div>
+    <button id="btn-capture" class="btn-primary">Capture &amp; Score</button>
+    <div class="footer-links">
+      <a href="#" id="link-settings">Settings</a>
+      <a href="#" id="link-dashboard">Open JH3000</a>
+    </div>
+  </div>
+
+  <!-- State: Loading -->
+  <div id="state-loading" class="state hidden">
+    <div class="header">
+      <div class="logo">JH<span class="accent">3000</span></div>
+    </div>
+    <div class="loading-container">
+      <div class="spinner"></div>
+      <div id="loading-text" class="loading-text">Extracting job data...</div>
+    </div>
+  </div>
+
+  <!-- State: Result -->
+  <div id="state-result" class="state hidden">
+    <div class="header">
+      <div class="logo">JH<span class="accent">3000</span></div>
+    </div>
+    <div id="duplicate-badge" class="badge-duplicate hidden">Already Captured</div>
+    <div class="score-container">
+      <div id="score-badge" class="score-badge">--</div>
+      <div id="score-label" class="score-label">Score</div>
+    </div>
+    <div id="fit-summary" class="fit-summary"></div>
+    <div id="pros-cons" class="pros-cons">
+      <div id="pros-list" class="pros"></div>
+      <div id="cons-list" class="cons"></div>
+    </div>
+    <div class="result-actions">
+      <a href="#" id="link-detail" class="btn-primary" target="_blank">View in JH3000</a>
+      <button id="btn-remove" class="btn-danger">Remove from JH3000</button>
+      <button id="btn-another" class="btn-secondary">Capture Another</button>
+    </div>
+  </div>
+
+  <!-- State: Error -->
+  <div id="state-error" class="state hidden">
+    <div class="header">
+      <div class="logo">JH<span class="accent">3000</span></div>
+    </div>
+    <div class="error-icon">!</div>
+    <div id="error-message" class="error-message">Cannot reach JH3000</div>
+    <button id="btn-retry" class="btn-primary">Retry</button>
+    <div class="footer-links">
+      <a href="#" id="link-settings-err">Check Settings</a>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

@@ -20,6 +20,15 @@ from services.db import (
 )
 
 app = FastAPI(title="JobHunter3000")
+
+from fastapi.middleware.cors import CORSMiddleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origin_regex=r"^chrome-extension://.*$",
+    allow_methods=["GET", "POST", "DELETE"],
+    allow_headers=["Content-Type"],
+)
+
 templates = Jinja2Templates(directory="templates")
 
 
@@ -399,6 +408,11 @@ async def resumes_page(request: Request):
     })
 
 
+@app.get("/help", response_class=HTMLResponse)
+async def help_page(request: Request):
+    return templates.TemplateResponse("help.html", {"request": request})
+
+
 @app.get("/settings", response_class=HTMLResponse)
 async def settings_page(request: Request, saved: Optional[str] = None):
     settings = load_settings()
@@ -441,6 +455,160 @@ async def save_settings_route(request: Request):
 # ---------------------------------------------------------------------------
 # API routes
 # ---------------------------------------------------------------------------
+
+@app.post("/api/jobs/capture")
+async def api_capture_job(request: Request):
+    """Capture a job from the browser extension.
+
+    Accepts two modes:
+    - Structured: {title, company, location, description, url, source}
+    - Raw: {raw_text, url, source, title_hint?, company_hint?}
+
+    Deduplicates, auto-scores, returns score data for the extension popup.
+    """
+    import asyncio
+    from services.db import upsert_job
+
+    body = await request.json()
+    url = (body.get("url") or "").strip()
+    source = body.get("source", "extension-generic")
+
+    # Determine if this is raw mode or structured
+    raw_text = (body.get("raw_text") or "").strip()
+    title = (body.get("title") or "").strip()
+    company = (body.get("company") or "").strip()
+
+    if raw_text and not title:
+        # Raw mode — use LLM to extract structured fields
+        settings = load_settings()
+        try:
+            from services.scorer import parse_job_posting_text
+
+            def _parse():
+                return parse_job_posting_text(raw_text, url, settings)
+
+            loop = asyncio.get_event_loop()
+            parsed = await loop.run_in_executor(None, _parse)
+
+            if parsed.get("error"):
+                return JSONResponse({"ok": False, "error": parsed["error"]}, status_code=400)
+
+            title = parsed.get("title", body.get("title_hint", ""))
+            company = parsed.get("company", body.get("company_hint", ""))
+            body["location"] = parsed.get("location", body.get("location", ""))
+            body["salary_text"] = parsed.get("salary_text", "")
+            body["description"] = parsed.get("description", "")
+        except Exception as e:
+            return JSONResponse({"ok": False, "error": f"LLM parse failed: {e}"}, status_code=500)
+
+    if not title:
+        title = body.get("title_hint", "Unknown Position")
+    if not company:
+        company = body.get("company_hint", "Unknown Company")
+
+    # Check for duplicate before inserting
+    conn = get_db()
+    from services.db import _normalize_url
+    if url:
+        norm_url = _normalize_url(url)
+        existing = conn.execute(
+            "SELECT id, score, fit_summary, pros, cons FROM jobs WHERE url = ? OR url = ?",
+            (url, norm_url),
+        ).fetchone()
+        if existing:
+            job = dict(existing)
+            conn.close()
+            return JSONResponse({
+                "ok": True,
+                "duplicate": True,
+                "id": job["id"],
+                "score": job.get("score"),
+                "fit_summary": job.get("fit_summary", ""),
+                "pros": json.loads(job.get("pros") or "[]"),
+                "cons": json.loads(job.get("cons") or "[]"),
+                "detail_url": f"/jobs/{job['id']}",
+            })
+
+    # Also check title+company dedup
+    if title and company:
+        existing = conn.execute(
+            "SELECT id, score, fit_summary, pros, cons FROM jobs WHERE LOWER(TRIM(title)) = LOWER(?) AND LOWER(TRIM(company)) = LOWER(?)",
+            (title, company),
+        ).fetchone()
+        if existing:
+            job = dict(existing)
+            conn.close()
+            return JSONResponse({
+                "ok": True,
+                "duplicate": True,
+                "id": job["id"],
+                "score": job.get("score"),
+                "fit_summary": job.get("fit_summary", ""),
+                "pros": json.loads(job.get("pros") or "[]"),
+                "cons": json.loads(job.get("cons") or "[]"),
+                "detail_url": f"/jobs/{job['id']}",
+            })
+
+    # Insert new job
+    job_data = {
+        "title": title,
+        "company": company,
+        "location": body.get("location", ""),
+        "salary_text": body.get("salary_text", ""),
+        "url": url,
+        "source": source,
+        "description": body.get("description", ""),
+        "status": "new",
+        "scraped_at": __import__("datetime").datetime.now().isoformat(),
+    }
+
+    job_id = upsert_job(conn, job_data)
+    if job_id <= 0:
+        # Shouldn't happen since we checked above, but just in case
+        conn.close()
+        return JSONResponse({"ok": True, "duplicate": True, "id": 0, "detail_url": "/jobs"})
+
+    conn.close()
+
+    # Auto-score
+    result = {"ok": True, "id": job_id, "detail_url": f"/jobs/{job_id}"}
+    settings = load_settings()
+
+    # Check if candidate profile exists before scoring
+    from services.resumes import load_candidate_profile
+    profile = load_candidate_profile()
+    if not profile:
+        result["score"] = None
+        result["fit_summary"] = "Set up your candidate profile to enable scoring."
+        return JSONResponse(result)
+
+    from services.scorer import score_jobs
+
+    def _score():
+        score_conn = get_db()
+        try:
+            return score_jobs(score_conn, settings, job_ids=[job_id], force=True)
+        finally:
+            score_conn.close()
+
+    try:
+        loop = asyncio.get_event_loop()
+        await loop.run_in_executor(None, _score)
+
+        # Fetch scored job data
+        conn2 = get_db()
+        scored_job = get_job(conn2, job_id)
+        conn2.close()
+        if scored_job:
+            result["score"] = scored_job.get("score")
+            result["fit_summary"] = scored_job.get("fit_summary", "")
+            result["pros"] = json.loads(scored_job.get("pros") or "[]")
+            result["cons"] = json.loads(scored_job.get("cons") or "[]")
+    except Exception as e:
+        result["score_error"] = str(e)
+
+    return JSONResponse(result)
+
 
 @app.get("/api/jobs")
 async def api_get_jobs(status: Optional[str] = None,
@@ -487,6 +655,20 @@ async def api_update_status(job_id: int, request: Request):
     if not success:
         return JSONResponse({"error": "Invalid status"}, status_code=400)
     return JSONResponse({"ok": True, "status": new_status})
+
+
+@app.delete("/api/jobs/{job_id}")
+async def api_delete_job(job_id: int):
+    """Delete a job from the database."""
+    conn = get_db()
+    job = get_job(conn, job_id)
+    if not job:
+        conn.close()
+        return JSONResponse({"error": "Job not found"}, status_code=404)
+    conn.execute("DELETE FROM jobs WHERE id = ?", (job_id,))
+    conn.commit()
+    conn.close()
+    return JSONResponse({"ok": True})
 
 
 @app.post("/api/jobs/{job_id}/notes")
@@ -1129,6 +1311,136 @@ async def api_interview_prep(job_id: int):
         return JSONResponse(result)
     except Exception as e:
         return JSONResponse({"error": str(e)}, status_code=500)
+
+
+@app.post("/api/jobs/{job_id}/chat")
+async def api_job_chat(job_id: int, request: Request):
+    """Chat with AI about a specific job posting.
+
+    Sends the full job context (description, score data, keywords, gaps,
+    candidate profile) as system context so the user can ask questions like
+    "What should I highlight?" or "Is this a good fit?"
+    """
+    import asyncio
+    from services.llm import llm_chat
+    from services.resumes import load_candidate_profile
+
+    body = await request.json()
+    user_message = (body.get("message") or "").strip()
+    history = body.get("history") or []  # [{role, content}, ...]
+
+    if not user_message:
+        return JSONResponse({"error": "message is required"}, status_code=400)
+
+    conn = get_db()
+    job = get_job(conn, job_id)
+    conn.close()
+    if not job:
+        return JSONResponse({"error": "Job not found"}, status_code=404)
+
+    settings = load_settings()
+    profile = load_candidate_profile()
+
+    # Build system context
+    parts = [
+        "You are a job search advisor inside JobHunter3000. The user is reviewing a specific job posting and asking questions about it.",
+        "Be concise, practical, and direct. Give actionable advice.",
+        "",
+        f"## Job Posting",
+        f"Title: {job.get('title', 'Unknown')}",
+        f"Company: {job.get('company', 'Unknown')}",
+        f"Location: {job.get('location', 'Not specified')}",
+        f"Salary: {job.get('salary_text') or job.get('salary_estimate') or 'Not listed'}",
+        f"Source: {job.get('source', 'Unknown')}",
+    ]
+
+    if job.get("score") is not None:
+        parts.append(f"\nFit Score: {job['score']}/100")
+    if job.get("fit_summary"):
+        parts.append(f"Fit Summary: {job['fit_summary']}")
+
+    # Pros/cons
+    for field in ("pros", "cons"):
+        val = job.get(field)
+        if isinstance(val, str):
+            try:
+                val = json.loads(val)
+            except (json.JSONDecodeError, TypeError):
+                val = []
+        if val:
+            label = "Pros" if field == "pros" else "Cons"
+            parts.append(f"\n{label}:")
+            for item in val:
+                parts.append(f"  - {item}")
+
+    # Keywords
+    kw_raw = job.get("keyword_match")
+    if isinstance(kw_raw, str):
+        try:
+            kw_raw = json.loads(kw_raw)
+        except (json.JSONDecodeError, TypeError):
+            kw_raw = []
+    if kw_raw:
+        matched = [k["keyword"] for k in kw_raw if k.get("matched")]
+        unmatched = [k["keyword"] for k in kw_raw if not k.get("matched")]
+        if matched:
+            parts.append(f"\nMatched Keywords: {', '.join(matched)}")
+        if unmatched:
+            parts.append(f"Missing Keywords: {', '.join(unmatched)}")
+
+    # Gaps
+    sd_raw = job.get("score_details")
+    if isinstance(sd_raw, str):
+        try:
+            sd = json.loads(sd_raw)
+            gaps = sd.get("gaps", [])
+            if gaps:
+                parts.append("\nGap Analysis:")
+                for g in gaps:
+                    line = f"  - Gap: {g.get('gap', '')}"
+                    if g.get("transferable"):
+                        line += f" (You have: {g['transferable']})"
+                    parts.append(line)
+        except (json.JSONDecodeError, TypeError):
+            pass
+
+    # Job description (truncated)
+    desc = job.get("description", "")
+    if desc:
+        parts.append(f"\n## Job Description (truncated)\n{desc[:4000]}")
+
+    # Candidate profile summary
+    if profile:
+        parts.append("\n## Candidate Profile")
+        if profile.get("summary"):
+            parts.append(profile["summary"])
+        if profile.get("skills"):
+            skills = profile["skills"]
+            if isinstance(skills, list):
+                parts.append(f"Skills: {', '.join(skills[:30])}")
+            elif isinstance(skills, dict):
+                for cat, items in skills.items():
+                    if isinstance(items, list):
+                        parts.append(f"{cat}: {', '.join(items[:10])}")
+
+    system_prompt = "\n".join(parts)
+
+    # Build message list: system + history + new message
+    messages = [{"role": "system", "content": system_prompt}]
+    for msg in history[-20:]:  # Keep last 20 messages to avoid token overflow
+        if msg.get("role") in ("user", "assistant") and msg.get("content"):
+            messages.append({"role": msg["role"], "content": msg["content"]})
+    messages.append({"role": "user", "content": user_message})
+
+    def _chat():
+        return llm_chat(messages, settings)
+
+    try:
+        loop = asyncio.get_event_loop()
+        reply = await loop.run_in_executor(None, _chat)
+        return JSONResponse({"ok": True, "reply": reply.strip()})
+    except Exception as e:
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
 
 
 @app.post("/api/scraper/suggest")

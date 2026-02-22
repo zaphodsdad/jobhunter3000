@@ -27,6 +27,43 @@ def _scoring_settings(settings: dict) -> dict:
     return s
 
 
+def parse_job_posting_text(raw_text: str, url: str, settings: dict) -> dict:
+    """Use LLM to extract structured job fields from raw page text.
+
+    Used by the browser extension when site-specific extractors fail
+    and we only have raw body text.
+    """
+    # Truncate to avoid blowing up context
+    truncated = raw_text[:8000]
+
+    prompt = f"""Extract job posting details from this page text. The page URL is: {url}
+
+PAGE TEXT:
+{truncated}
+
+Return ONLY valid JSON (no markdown fences):
+{{"title": "Job Title", "company": "Company Name", "location": "City, State or Remote", "salary_text": "salary range if mentioned or empty string", "description": "the job description text (key responsibilities, requirements, qualifications — up to 2000 chars)"}}
+
+If you cannot identify a job posting in this text, return:
+{{"error": "Could not identify a job posting on this page"}}"""
+
+    score_settings = _scoring_settings(settings)
+    result = llm_chat(
+        [{"role": "user", "content": prompt}],
+        score_settings,
+    )
+
+    try:
+        cleaned = result.strip()
+        if cleaned.startswith("```"):
+            cleaned = cleaned.split("\n", 1)[1]
+            if cleaned.endswith("```"):
+                cleaned = cleaned.rsplit("```", 1)[0]
+        return json.loads(cleaned)
+    except (json.JSONDecodeError, ValueError):
+        return {"error": "Failed to parse LLM response"}
+
+
 def score_job(job: dict, settings: dict, profile: dict = None) -> dict:
     """Score a single job against the candidate profile. Returns score dict."""
     if not profile:

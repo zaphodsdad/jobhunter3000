@@ -812,6 +812,7 @@ async function wizardNext() {
     var valid = await validateStep(step);
     if (!valid) return;
     await saveStep(step);
+    if (step === 2) await loadProfile();  // Re-fetch profile after resume analysis
     if (step === 3) loadStep4FromProfile();
     if (step === 5) buildLaunchSummary();
     if (step < W.totalSteps) showStep(step + 1);

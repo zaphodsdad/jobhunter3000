@@ -294,6 +294,56 @@ def _pick_best_resume(job: dict) -> tuple[str, str]:
     return "", ""
 
 
+def _build_keyword_blocks(job: dict) -> tuple[str, str]:
+    """Extract keyword_match and gaps from a scored job and format them for LLM prompts.
+
+    Returns (keyword_block, gap_block) as formatted strings ready to inject into prompts.
+    """
+    keyword_block = ""
+    gap_block = ""
+
+    # Parse keyword_match
+    km_raw = job.get("keyword_match")
+    if km_raw:
+        try:
+            keywords = json.loads(km_raw) if isinstance(km_raw, str) else km_raw
+        except (json.JSONDecodeError, TypeError):
+            keywords = []
+
+        if keywords:
+            matched = [k["keyword"] for k in keywords if k.get("matched")]
+            unmatched = [k["keyword"] for k in keywords if not k.get("matched")]
+
+            keyword_block = "\nATS KEYWORDS FROM THIS JOB POSTING:"
+            if matched:
+                keyword_block += f"\nYou HAVE these (use exact phrasing in resume): {', '.join(matched)}"
+            if unmatched:
+                keyword_block += f"\nYou're MISSING these (address with transferable skills where possible): {', '.join(unmatched)}"
+            keyword_block += "\n"
+
+    # Parse gaps from score_details
+    sd_raw = job.get("score_details")
+    if sd_raw:
+        try:
+            sd = json.loads(sd_raw) if isinstance(sd_raw, str) else sd_raw
+        except (json.JSONDecodeError, TypeError):
+            sd = {}
+
+        gaps = sd.get("gaps", [])
+        if gaps:
+            gap_block = "\nGAP ANALYSIS (from AI scoring):"
+            for g in gaps:
+                gap = g.get("gap", "")
+                transferable = g.get("transferable", "")
+                if transferable:
+                    gap_block += f"\n- GAP: {gap} → BRIDGE WITH: {transferable}"
+                else:
+                    gap_block += f"\n- GAP: {gap} (no direct transferable skill — do not fabricate)"
+            gap_block += "\n"
+
+    return keyword_block, gap_block
+
+
 def generate_resume(job: dict, settings: dict = None) -> dict:
     """Generate a tailored resume for a specific job posting.
 
@@ -318,6 +368,9 @@ def generate_resume(job: dict, settings: dict = None) -> dict:
         f"Salary: {job.get('salary_text', 'Not listed')}\n"
         f"Description:\n{(job.get('description', '') or '')[:4000]}"
     )
+
+    # Extract keyword and gap data from scoring (if available)
+    keyword_block, gap_block = _build_keyword_blocks(job)
 
     # Build complete work history with highlights for the prompt
     work_history_block = ""
@@ -349,11 +402,13 @@ ADDITIONAL DETAIL FROM SOURCE RESUME (supplement the work history above):
 
 TARGET JOB:
 {job_info}
-
+{keyword_block}
+{gap_block}
 INSTRUCTIONS:
 - Tailor this resume specifically for the job above
 - Lead with the most relevant experience and skills for THIS role
-- Use keywords and phrases from the job description naturally
+- CRITICAL FOR ATS: The "ATS KEYWORDS" above are the exact terms the employer's screening system will search for. Work as many matched keywords as possible into your bullet points, skills section, and summary — use the EXACT phrasing from the job posting, not synonyms. For unmatched keywords where the candidate has transferable experience, frame the transferable skill using the employer's terminology.
+- For gaps with transferable skills listed, address them by emphasizing the transferable experience using language that bridges to what the employer wants
 - Keep it to 1-2 pages worth of content
 - Use clean markdown formatting with clear sections
 - Include: Contact header, Professional Summary (tailored), Key Skills (relevant ones first), Professional Experience, Education
@@ -424,6 +479,9 @@ def generate_cover_letter(job: dict, settings: dict = None) -> dict:
         f"Description:\n{(job.get('description', '') or '')[:4000]}"
     )
 
+    # Extract keyword and gap data from scoring (if available)
+    keyword_block, gap_block = _build_keyword_blocks(job)
+
     work_history = ""
     for wh in profile.get("work_history", [])[:5]:
         highlights = "; ".join(wh.get("highlights", [])[:2])
@@ -450,11 +508,13 @@ RELEVANT WORK HISTORY:
 
 TARGET JOB:
 {job_info}
-
+{keyword_block}
+{gap_block}
 INSTRUCTIONS:
 - Write a professional cover letter (3-4 paragraphs)
 - Opening: Hook that shows you understand what this company/role needs
-- Body: Connect 2-3 specific experiences to what the job requires — be concrete, not generic
+- Body: Connect 2-3 specific experiences to what the job requires — be concrete, not generic. Prioritize addressing the matched ATS keywords above and use the employer's exact terminology where natural.
+- Where gaps exist with transferable skills, briefly frame the transferable experience as relevant (don't call out the gap — just bridge to it)
 - Closing: Confident but not arrogant, express genuine interest, call to action
 - Tone: Professional, direct, personable — not stuffy corporate-speak
 - Do NOT use cliches like "I'm writing to express my interest" or "I believe I would be an asset"

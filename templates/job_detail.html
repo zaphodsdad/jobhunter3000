@@ -416,6 +416,135 @@
     .btn-revise:hover { background: rgba(245, 158, 11, 0.2); }
     .btn-revise:disabled { opacity: 0.5; cursor: wait; }
 
+    /* ── Chat Panel ────────────────────────────────────── */
+    .chat-section {
+      border: 1px solid #1a1f2e;
+      border-radius: 8px;
+      overflow: hidden;
+      margin-bottom: 1.5rem;
+    }
+
+    .chat-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      padding: 0.75rem 1rem;
+      background: #0c0e14;
+      border: none;
+      color: #e2e8f0;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .chat-toggle:hover { background: #111318; }
+
+    .chat-toggle .chat-toggle-icon {
+      color: #00e5ff;
+      font-size: 0.75rem;
+      transition: transform 0.2s;
+    }
+    .chat-toggle.open .chat-toggle-icon { transform: rotate(180deg); }
+
+    .chat-body {
+      display: none;
+      background: #111318;
+    }
+    .chat-body.open { display: flex; flex-direction: column; }
+
+    .chat-messages {
+      min-height: 120px;
+      max-height: 400px;
+      overflow-y: auto;
+      padding: 12px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .chat-empty {
+      text-align: center;
+      color: #4b5563;
+      font-size: 0.82rem;
+      padding: 32px 16px;
+    }
+
+    .chat-msg {
+      max-width: 85%;
+      padding: 0.5rem 0.75rem;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      line-height: 1.55;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+
+    .chat-msg.user {
+      align-self: flex-end;
+      background: rgba(0, 229, 255, 0.1);
+      color: #e2e8f0;
+      border: 1px solid rgba(0, 229, 255, 0.2);
+    }
+
+    .chat-msg.assistant {
+      align-self: flex-start;
+      background: #0c0e14;
+      color: #cbd5e1;
+      border: 1px solid #1a1f2e;
+    }
+
+    .chat-msg.assistant .msg-thinking {
+      color: #6b7280;
+      font-style: italic;
+    }
+
+    .chat-input-row {
+      display: flex;
+      gap: 8px;
+      padding: 10px 16px;
+      border-top: 1px solid #1a1f2e;
+      background: #0c0e14;
+    }
+
+    .chat-input-row textarea {
+      flex: 1;
+      background: #111318;
+      color: #e2e8f0;
+      border: 1px solid #2a2f3e;
+      border-radius: 6px;
+      padding: 0.5rem 0.75rem;
+      font-size: 0.85rem;
+      font-family: inherit;
+      resize: none;
+      min-height: 2.2rem;
+      max-height: 5rem;
+      outline: none;
+      transition: border-color 0.2s;
+      box-sizing: border-box;
+    }
+    .chat-input-row textarea:focus { border-color: #00e5ff; }
+    .chat-input-row textarea::placeholder { color: #4b5563; }
+
+    .btn-chat-send {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 0.5rem 1rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s;
+      background: rgba(0, 229, 255, 0.12);
+      color: #00e5ff;
+      border: 1px solid rgba(0, 229, 255, 0.3);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .btn-chat-send:hover { background: rgba(0, 229, 255, 0.22); }
+    .btn-chat-send:disabled { opacity: 0.5; cursor: wait; }
+
     /* ── Notes ──────────────────────────────────────────── */
     .notes-section textarea {
       width: 100%;
@@ -756,6 +885,26 @@
       </div>
     </div>
 
+    <!-- ═══════════════════════════════════════════════════
+         AI CHAT
+         ═══════════════════════════════════════════════════ -->
+    <div class="detail-section chat-section">
+      <button class="chat-toggle" id="chatToggle" onclick="toggleChat()">
+        <span>AI Chat — Ask about this job</span>
+        <span class="chat-toggle-icon">&#9660;</span>
+      </button>
+      <div class="chat-body" id="chatBody">
+        <div class="chat-messages" id="chatMessages">
+          <div class="chat-empty" id="chatEmpty">Ask anything about this job — fit, salary negotiation, interview tips, what to highlight...</div>
+        </div>
+        <div class="chat-input-row">
+          <textarea id="chatInput" placeholder="e.g. What skills should I emphasize for this role?" rows="1"
+            onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat();}"></textarea>
+          <button class="btn-chat-send" id="btnChatSend" onclick="sendChat()">Send</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Notes -->
     <div class="detail-section notes-section">
       <h3>Notes</h3>
@@ -1044,6 +1193,74 @@
         btn.innerHTML = 'Generate Interview Prep';
         btn.disabled = false;
       }
+    }
+
+    /* ── AI Chat ──────────────────────────────────────── */
+    var chatHistory = [];
+
+    function toggleChat() {
+      var toggle = document.getElementById('chatToggle');
+      var body = document.getElementById('chatBody');
+      toggle.classList.toggle('open');
+      body.classList.toggle('open');
+      if (body.classList.contains('open')) {
+        document.getElementById('chatInput').focus();
+      }
+    }
+
+    function appendChatMsg(role, text) {
+      var container = document.getElementById('chatMessages');
+      var empty = document.getElementById('chatEmpty');
+      if (empty) empty.remove();
+
+      var div = document.createElement('div');
+      div.className = 'chat-msg ' + role;
+      div.textContent = text;
+      container.appendChild(div);
+      container.scrollTop = container.scrollHeight;
+      return div;
+    }
+
+    async function sendChat() {
+      var input = document.getElementById('chatInput');
+      var btn = document.getElementById('btnChatSend');
+      var message = input.value.trim();
+      if (!message) return;
+
+      // Show user message
+      appendChatMsg('user', message);
+      input.value = '';
+      btn.disabled = true;
+      btn.textContent = '...';
+
+      // Show thinking indicator
+      var thinkingDiv = appendChatMsg('assistant', 'Thinking...');
+      thinkingDiv.querySelector || (thinkingDiv.innerHTML = '<span class="msg-thinking">Thinking...</span>');
+
+      try {
+        var resp = await fetch('/api/jobs/' + JOB_ID + '/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: message, history: chatHistory })
+        });
+        var data = await resp.json();
+
+        if (data.ok) {
+          thinkingDiv.textContent = data.reply;
+          chatHistory.push({ role: 'user', content: message });
+          chatHistory.push({ role: 'assistant', content: data.reply });
+        } else {
+          thinkingDiv.textContent = 'Error: ' + (data.error || 'Unknown error');
+          thinkingDiv.style.color = '#f87171';
+        }
+      } catch (err) {
+        thinkingDiv.textContent = 'Error: ' + err.message;
+        thinkingDiv.style.color = '#f87171';
+      }
+
+      btn.disabled = false;
+      btn.textContent = 'Send';
+      if (window.refreshTopbarCredits) refreshTopbarCredits();
     }
 
     /* ── Revise Document ───────────────────────────────── */

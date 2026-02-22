@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>JobHunter3000 Settings</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      width: 400px;
+      background: #0f1117;
+      color: #e0e0e0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 14px;
+      padding: 20px;
+    }
+    h2 {
+      font-size: 16px;
+      margin-bottom: 16px;
+      color: #22d3ee;
+    }
+    label {
+      display: block;
+      margin-bottom: 4px;
+      color: #999;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    input[type="text"] {
+      width: 100%;
+      padding: 8px 12px;
+      background: #1a1d27;
+      border: 1px solid #2a2d3a;
+      border-radius: 6px;
+      color: #e0e0e0;
+      font-size: 14px;
+      margin-bottom: 12px;
+    }
+    input[type="text"]:focus {
+      outline: none;
+      border-color: #22d3ee;
+    }
+    .btn-row {
+      display: flex;
+      gap: 8px;
+    }
+    button {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-save {
+      background: #22d3ee;
+      color: #0f1117;
+    }
+    .btn-save:hover { background: #1ab8d1; }
+    .btn-test {
+      background: transparent;
+      color: #6c8bef;
+      border: 1px solid #2a2d3a;
+    }
+    .btn-test:hover { border-color: #6c8bef; }
+    #status {
+      margin-top: 12px;
+      font-size: 13px;
+      min-height: 20px;
+    }
+    .status-ok { color: #4ade80; }
+    .status-err { color: #ef4444; }
+  </style>
+</head>
+<body>
+  <h2>JobHunter3000 Settings</h2>
+  <label for="url-input">JH3000 Server URL</label>
+  <input type="text" id="url-input" placeholder="http://localhost:8001">
+  <div class="btn-row">
+    <button class="btn-save" id="btn-save">Save</button>
+    <button class="btn-test" id="btn-test">Test Connection</button>
+  </div>
+  <div id="status"></div>
+  <script src="options.js"></script>
+</body>
+</html>

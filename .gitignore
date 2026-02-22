@@ -87,6 +87,10 @@ Thumbs.db
 *.swo
 *~
 
+# Archives / build artifacts
+*.tar.gz
+*.zip
+
 # Syncthing
 .stfolder/
 .stignore

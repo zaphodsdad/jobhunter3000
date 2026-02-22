@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JobHunter3000 — Help</title>
+    <style>
+        {% include 'base_styles.html' %}
+
+        .content-area {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 1.5rem 2rem 3rem;
+        }
+
+        .page-header {
+            margin-bottom: 1.5rem;
+        }
+
+        .page-header h1 {
+            color: var(--text-primary);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            font-size: 0.85rem;
+            margin: 0;
+        }
+
+        .page-header h1::before {
+            content: '//';
+            color: var(--accent-primary);
+            margin-right: 0.5rem;
+        }
+
+        /* Tab navigation */
+        .help-tabs {
+            display: flex;
+            gap: 4px;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 24px;
+        }
+
+        .help-tab {
+            padding: 10px 20px;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            background: none;
+            border: none;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: color 0.15s, border-color 0.15s;
+            font-family: var(--font-stack);
+        }
+
+        .help-tab:hover {
+            color: var(--text-primary);
+        }
+
+        .help-tab.active {
+            color: var(--accent-primary);
+            border-bottom-color: var(--accent-primary);
+        }
+
+        .help-panel {
+            display: none;
+        }
+
+        .help-panel.active {
+            display: block;
+        }
+
+        /* Step cards */
+        .step {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 20px;
+            padding: 16px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+        }
+
+        .step-number {
+            flex-shrink: 0;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background: var(--accent-primary);
+            color: #0f1117;
+            font-size: 16px;
+            font-weight: 700;
+        }
+
+        .step-content h3 {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 6px;
+        }
+
+        .step-content p {
+            font-size: 14px;
+            color: var(--text-secondary);
+            line-height: 1.6;
+            margin-bottom: 6px;
+        }
+
+        .step-content code {
+            display: inline-block;
+            padding: 2px 8px;
+            background: var(--bg-nav);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            color: var(--accent-primary);
+        }
+
+        .step-content .url-box {
+            display: block;
+            padding: 8px 12px;
+            margin: 8px 0;
+            background: var(--bg-nav);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            color: var(--accent-primary);
+            user-select: all;
+            cursor: pointer;
+        }
+
+        .step-content .url-box:hover {
+            border-color: var(--accent-primary);
+        }
+
+        /* Tip callouts */
+        .tip {
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin: 16px 0;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .tip-info {
+            background: rgba(34, 211, 238, 0.08);
+            border: 1px solid rgba(34, 211, 238, 0.2);
+            color: var(--text-primary);
+        }
+
+        .tip-info::before {
+            content: 'TIP: ';
+            font-weight: 700;
+            color: var(--accent-primary);
+        }
+
+        .tip-warning {
+            background: rgba(251, 191, 36, 0.08);
+            border: 1px solid rgba(251, 191, 36, 0.2);
+            color: var(--text-primary);
+        }
+
+        .tip-warning::before {
+            content: 'NOTE: ';
+            font-weight: 700;
+            color: #fbbf24;
+        }
+
+        /* Section headers within panels */
+        .section-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin: 24px 0 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .section-title:first-child {
+            margin-top: 0;
+        }
+
+        /* FAQ */
+        .faq-item {
+            margin-bottom: 16px;
+            padding: 16px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+        }
+
+        .faq-item h3 {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--accent-primary);
+            margin-bottom: 8px;
+        }
+
+        .faq-item p {
+            font-size: 14px;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        /* Keyboard shortcut display */
+        kbd {
+            display: inline-block;
+            padding: 2px 8px;
+            font-size: 12px;
+            font-family: var(--font-stack);
+            color: var(--text-primary);
+            background: var(--bg-nav);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            box-shadow: 0 1px 0 var(--border);
+        }
+
+        /* Feature list */
+        .feature-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .feature-list li {
+            padding: 8px 0;
+            padding-left: 24px;
+            position: relative;
+            font-size: 14px;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        .feature-list li::before {
+            content: '';
+            position: absolute;
+            left: 4px;
+            top: 14px;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--accent-primary);
+        }
+
+        .feature-list li strong {
+            color: var(--text-primary);
+        }
+    </style>
+</head>
+<body>
+    <!-- Topbar -->
+    <header class="topbar">
+        <div class="topbar-brand" style="font-size:1.5rem;font-weight:700;color:var(--text-primary);letter-spacing:-0.5px;">Job<span style="color:var(--accent-primary);">Hunter</span>3000</div>
+    </header>
+
+    <!-- Navigation -->
+    {% set active = 'help' %}
+    {% include 'nav.html' %}
+
+    <!-- Main Content -->
+    <main class="content-area">
+        <div class="page-header">
+            <h1>Field Manual</h1>
+        </div>
+
+        <!-- Tabs -->
+        <div class="help-tabs">
+            <button class="help-tab active" data-tab="extension">Browser Extension</button>
+            <button class="help-tab" data-tab="getting-started">Getting Started</button>
+            <button class="help-tab" data-tab="scoring">How Scoring Works</button>
+            <button class="help-tab" data-tab="shortcuts">Shortcuts</button>
+            <button class="help-tab" data-tab="faq">FAQ</button>
+        </div>
+
+        <!-- ═══ Browser Extension Panel ═══ -->
+        <div id="panel-extension" class="help-panel active">
+
+            <h2 class="section-title">Install the Browser Extension</h2>
+            <p style="color:var(--text-secondary);margin-bottom:20px;font-size:14px;">
+                The JH3000 browser extension lets you capture job postings from any website — LinkedIn, Indeed, Glassdoor, company career pages, anywhere — and instantly score them against your profile.
+            </p>
+
+            <div class="step">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    <h3>Open Chrome Extensions</h3>
+                    <p>Type this in your Chrome address bar and hit Enter:</p>
+                    <span class="url-box" title="Click to select">chrome://extensions</span>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                    <h3>Enable Developer Mode</h3>
+                    <p>Find the <strong>Developer mode</strong> toggle in the top-right corner of the page and turn it on. This lets you install extensions from a local folder instead of the Chrome Web Store.</p>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-number">3</div>
+                <div class="step-content">
+                    <h3>Load the Extension</h3>
+                    <p>Click the <strong>Load unpacked</strong> button that appeared in the top-left. Navigate to your JobHunter3000 folder and select the <code>extension</code> subfolder.</p>
+                    <div class="tip tip-info">
+                        The extension folder is inside your JH3000 installation. If you installed JH3000 at <code>C:\jobhunter3000</code>, select <code>C:\jobhunter3000\extension</code>.
+                    </div>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-number">4</div>
+                <div class="step-content">
+                    <h3>Pin It to Your Toolbar</h3>
+                    <p>Click the puzzle piece icon in Chrome's toolbar, then click the pin icon next to <strong>JobHunter3000</strong>. The JH3000 icon will appear in your toolbar for quick access.</p>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-number">5</div>
+                <div class="step-content">
+                    <h3>You're Done</h3>
+                    <p>Browse to any job posting and click the JH3000 icon. Hit <strong>Capture &amp; Score</strong> to send the job to JH3000 for instant AI scoring against your profile. The score, pros, and cons appear right in the popup.</p>
+                </div>
+            </div>
+
+            <div class="tip tip-warning">
+                JH3000 must be running for the extension to work. The extension sends job data to your local JH3000 instance for scoring. If JH3000 isn't running, the extension will show a "Cannot reach JH3000" message.
+            </div>
+
+            <h2 class="section-title">Supported Sites</h2>
+            <ul class="feature-list">
+                <li><strong>LinkedIn</strong> — full extraction of job title, company, location, and description</li>
+                <li><strong>Indeed</strong> — full extraction including salary when listed</li>
+                <li><strong>Greenhouse</strong> — company career pages powered by Greenhouse ATS</li>
+                <li><strong>Lever</strong> — company career pages powered by Lever ATS</li>
+                <li><strong>Any other site</strong> — automatic fallback extracts structured data (JSON-LD) or sends page text to AI for parsing</li>
+            </ul>
+
+            <h2 class="section-title">Extension Settings</h2>
+            <p style="color:var(--text-secondary);font-size:14px;">
+                Right-click the JH3000 extension icon and select <strong>Options</strong> to configure the server URL. Default is <code>http://localhost:8001</code>. Use the <strong>Test Connection</strong> button to verify JH3000 is reachable.
+            </p>
+        </div>
+
+        <!-- ═══ Getting Started Panel ═══ -->
+        <div id="panel-getting-started" class="help-panel">
+
+            <h2 class="section-title">Quick Start</h2>
+
+            <div class="step">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    <h3>Configure Your AI</h3>
+                    <p>Go to <a href="/settings">Settings</a> and set up your LLM provider. JH3000 supports OpenRouter, Google Gemini, and Ollama (local). You need at least one configured for scoring and document generation.</p>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                    <h3>Upload Your Resume</h3>
+                    <p>Go to <a href="/resumes">Arsenal</a> and upload your resume (PDF, DOCX, MD, or TXT). Click <strong>Analyze All</strong> to let the AI extract your skills, experience, and strengths. This builds the profile used for scoring.</p>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-number">3</div>
+                <div class="step-content">
+                    <h3>Review Your Profile</h3>
+                    <p>Go to <a href="/profile">Dossier</a> to review and edit the AI-generated candidate profile. This is what every job gets scored against — make sure it's accurate.</p>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-number">4</div>
+                <div class="step-content">
+                    <h3>Add Jobs</h3>
+                    <p>Three ways to get jobs into JH3000:</p>
+                    <ul class="feature-list">
+                        <li><strong>Browser extension</strong> — browse job boards, click the extension to capture and score instantly</li>
+                        <li><strong>Automated scraping</strong> — set up search profiles in <a href="/scraper">Recon</a> to scrape job boards automatically</li>
+                        <li><strong>Manual entry</strong> — paste a job URL or description directly on the <a href="/jobs">Intel</a> page</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-number">5</div>
+                <div class="step-content">
+                    <h3>Generate Tailored Documents</h3>
+                    <p>Click into any scored job to generate a tailored resume and cover letter. Download as DOCX, PDF, or plain text. Use the <strong>Revise</strong> button to refine with specific feedback.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══ How Scoring Works Panel ═══ -->
+        <div id="panel-scoring" class="help-panel">
+
+            <h2 class="section-title">AI Job Scoring (0-100)</h2>
+            <p style="color:var(--text-secondary);font-size:14px;margin-bottom:16px;">
+                Every job gets scored against your candidate profile. The AI evaluates role fit, skill overlap, location, salary, and industry alignment.
+            </p>
+
+            <div class="step">
+                <div class="step-number" style="background:var(--score-high);">90</div>
+                <div class="step-content">
+                    <h3>90-100: Perfect Match</h3>
+                    <p>Right role, right location, right pay, strong skill overlap. Apply immediately.</p>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-number" style="background:var(--score-good);">70</div>
+                <div class="step-content">
+                    <h3>70-89: Strong Match</h3>
+                    <p>Most criteria met, worth applying. Might have one minor gap (commute, one missing skill).</p>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-number" style="background:var(--score-mid);">50</div>
+                <div class="step-content">
+                    <h3>50-69: Moderate Match</h3>
+                    <p>Some fit, but a stretch or compromise. Worth reading the full description to decide.</p>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-number" style="background:var(--score-low);color:var(--text-primary);">30</div>
+                <div class="step-content">
+                    <h3>30-49: Weak Match</h3>
+                    <p>Significant gaps or misalignment. Only apply if something specific about it appeals to you.</p>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-number" style="background:#2a2d3a;color:var(--text-secondary);">0</div>
+                <div class="step-content">
+                    <h3>0-29: Poor Match</h3>
+                    <p>Wrong field, wrong location, or requires credentials you don't have. Skip it.</p>
+                </div>
+            </div>
+
+            <h2 class="section-title">What Else the AI Checks</h2>
+            <ul class="feature-list">
+                <li><strong>Ghost job detection</strong> — flags vague postings that might be fake or already filled</li>
+                <li><strong>Keyword matching</strong> — shows which required skills you have and which you're missing</li>
+                <li><strong>Gap analysis</strong> — identifies gaps and suggests transferable skills that partially cover them</li>
+                <li><strong>Salary estimate</strong> — if the posting doesn't list pay, AI estimates based on title, location, and industry</li>
+            </ul>
+        </div>
+
+        <!-- ═══ Shortcuts Panel ═══ -->
+        <div id="panel-shortcuts" class="help-panel">
+
+            <h2 class="section-title">Browser Extension</h2>
+            <div class="faq-item">
+                <h3><kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>J</kbd></h3>
+                <p>Capture and score the current page without opening the extension popup. The score will appear as a badge on the extension icon.</p>
+            </div>
+
+            <h2 class="section-title">Job Detail Page</h2>
+            <div class="faq-item">
+                <h3>Status Buttons</h3>
+                <p>Click any status button (Interested, Applied, Interviewing, etc.) to update a job's pipeline status. The Applied button automatically records the date.</p>
+            </div>
+        </div>
+
+        <!-- ═══ FAQ Panel ═══ -->
+        <div id="panel-faq" class="help-panel">
+
+            <div class="faq-item">
+                <h3>The extension says "Cannot reach JH3000"</h3>
+                <p>JH3000 needs to be running on your computer. Make sure you've started it (<code>python app.py</code> or however you run it) and that it's accessible at the URL shown in the extension settings (default: <code>http://localhost:8001</code>). Click the green dot in the extension popup to check connection status.</p>
+            </div>
+
+            <div class="faq-item">
+                <h3>The extension captured a job but didn't score it</h3>
+                <p>Scoring requires a candidate profile. Go to <a href="/resumes">Arsenal</a>, upload your resume, and click <strong>Analyze All</strong>. Then go to <a href="/profile">Dossier</a> and verify your profile looks correct. After that, new captures will be scored automatically.</p>
+            </div>
+
+            <div class="faq-item">
+                <h3>I captured the same job twice</h3>
+                <p>JH3000 automatically detects duplicates by URL and by title + company name. If you capture a job that's already in the system, it'll show the existing score instead of creating a duplicate. No wasted AI calls.</p>
+            </div>
+
+            <div class="faq-item">
+                <h3>The extension didn't extract the right data from a page</h3>
+                <p>The extension has specialized extractors for LinkedIn, Indeed, Greenhouse, and Lever. For other sites, it tries to find structured data (JSON-LD) first, then falls back to sending the page text to AI for parsing. If a site consistently extracts poorly, you can always paste the job description manually on the <a href="/jobs">Intel</a> page.</p>
+            </div>
+
+            <div class="faq-item">
+                <h3>Where does my data go?</h3>
+                <p>Nowhere. Everything stays on your machine. Your resumes, profile, job data, and generated documents are stored locally in the <code>data/</code> folder. The only external calls are to your configured AI provider (OpenRouter, Google, or Ollama) for scoring and document generation.</p>
+            </div>
+
+            <div class="faq-item">
+                <h3>What AI providers can I use?</h3>
+                <p><strong>OpenRouter</strong> — access to Claude, GPT-4, and dozens of other models. Pay-per-use. <strong>Google Gemini</strong> — free tier available. <strong>Ollama</strong> — 100% local, free, no API key needed, but requires a machine with enough RAM to run models.</p>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+    // Tab switching
+    document.querySelectorAll('.help-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            document.querySelectorAll('.help-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.help-panel').forEach(p => p.classList.remove('active'));
+            tab.classList.add('active');
+            document.getElementById('panel-' + tab.dataset.tab).classList.add('active');
+        });
+    });
+    </script>
+</body>
+</html>

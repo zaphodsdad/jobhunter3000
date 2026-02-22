@@ -97,6 +97,7 @@ def _run_migrations(conn: sqlite3.Connection):
         "keyword_match": "ALTER TABLE jobs ADD COLUMN keyword_match TEXT",
         "interview_prep": "ALTER TABLE jobs ADD COLUMN interview_prep TEXT",
         "salary_estimate": "ALTER TABLE jobs ADD COLUMN salary_estimate TEXT",
+        "is_favorite": "ALTER TABLE jobs ADD COLUMN is_favorite INTEGER DEFAULT 0",
     }
     for col, sql in migrations.items():
         if col not in cols:
@@ -168,7 +169,7 @@ def get_jobs(conn: sqlite3.Connection, status: str = None, source: str = None,
              sort: str = "created_at", order: str = "desc",
              limit: int = 100, offset: int = 0,
              min_score: int = None, search_query: str = None,
-             max_age_hours: int = None) -> list[dict]:
+             max_age_hours: int = None, favorites_only: bool = False) -> list[dict]:
     """Get paginated job list with optional filters."""
     where_parts = []
     params = []
@@ -183,7 +184,7 @@ def get_jobs(conn: sqlite3.Connection, status: str = None, source: str = None,
         where_parts.append("source = ?")
         params.append(source)
     if min_score is not None and min_score > 0:
-        where_parts.append("(score >= ? OR score IS NULL)")
+        where_parts.append("(score >= ? OR score IS NULL OR is_favorite = 1)")
         params.append(min_score)
     if search_query:
         where_parts.append("search_query = ?")
@@ -193,11 +194,13 @@ def get_jobs(conn: sqlite3.Connection, status: str = None, source: str = None,
             "COALESCE(posted_date, scraped_at, created_at) >= datetime('now', ?)"
         )
         params.append(f"-{max_age_hours} hours")
+    if favorites_only:
+        where_parts.append("is_favorite = 1")
 
     where_clause = " AND ".join(where_parts) if where_parts else "1=1"
 
     # Whitelist sort columns
-    valid_sorts = {"created_at", "score", "title", "company", "status", "location"}
+    valid_sorts = {"created_at", "score", "title", "company", "status", "location", "is_favorite"}
     if sort not in valid_sorts:
         sort = "created_at"
     if order not in ("asc", "desc"):
@@ -205,9 +208,9 @@ def get_jobs(conn: sqlite3.Connection, status: str = None, source: str = None,
 
     # Push NULLs to bottom regardless of sort direction
     if sort == "score":
-        order_clause = f"CASE WHEN score IS NULL THEN 1 ELSE 0 END, score {order}"
+        order_clause = f"is_favorite DESC, CASE WHEN score IS NULL THEN 1 ELSE 0 END, score {order}"
     else:
-        order_clause = f"{sort} {order}"
+        order_clause = f"is_favorite DESC, {sort} {order}"
 
     query = f"""
         SELECT * FROM jobs
@@ -252,7 +255,7 @@ def update_job(conn: sqlite3.Connection, job_id: int, data: dict) -> bool:
         "resume_used", "resume_path", "cover_letter_path",
         "contact_name", "contact_email", "contact_title",
         "score", "score_details", "pros", "cons", "fit_summary",
-        "applied_date", "followed_up_at",
+        "applied_date", "followed_up_at", "is_favorite",
     }
     to_update = {k: v for k, v in data.items() if k in allowed}
     if not to_update:

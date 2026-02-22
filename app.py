@@ -111,7 +111,8 @@ async def jobs_page(request: Request,
                     order: Optional[str] = "desc",
                     min_score: Optional[int] = None,
                     search_query: Optional[str] = None,
-                    freshness: Optional[int] = None):
+                    freshness: Optional[int] = None,
+                    favorites: Optional[int] = None):
     settings = load_settings()
 
     # Use settings default if no override in URL
@@ -121,7 +122,7 @@ async def jobs_page(request: Request,
     conn = get_db()
     jobs = get_jobs(conn, status=status, source=source, sort=sort, order=order,
                     limit=500, min_score=min_score, search_query=search_query,
-                    max_age_hours=freshness)
+                    max_age_hours=freshness, favorites_only=bool(favorites))
     statuses = get_statuses(conn)
     sources = get_sources(conn)
     search_queries = get_search_queries(conn)
@@ -150,6 +151,7 @@ async def jobs_page(request: Request,
         "current_min_score": min_score,
         "current_search_query": search_query or "",
         "current_freshness": freshness or 0,
+        "current_favorites": favorites or 0,
     })
 
 
@@ -669,6 +671,20 @@ async def api_delete_job(job_id: int):
     conn.commit()
     conn.close()
     return JSONResponse({"ok": True})
+
+
+@app.post("/api/jobs/{job_id}/favorite")
+async def api_toggle_favorite(job_id: int):
+    """Toggle is_favorite between 0 and 1."""
+    conn = get_db()
+    job = get_job(conn, job_id)
+    if not job:
+        conn.close()
+        return JSONResponse({"error": "Job not found"}, status_code=404)
+    new_val = 0 if job.get("is_favorite") else 1
+    update_job(conn, job_id, {"is_favorite": new_val})
+    conn.close()
+    return JSONResponse({"ok": True, "is_favorite": new_val})
 
 
 @app.post("/api/jobs/{job_id}/notes")

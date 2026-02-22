@@ -407,14 +407,21 @@ TARGET JOB:
 INSTRUCTIONS:
 - Tailor this resume specifically for the job above
 - Lead with the most relevant experience and skills for THIS role
-- CRITICAL FOR ATS: The "ATS KEYWORDS" above are the exact terms the employer's screening system will search for. Work as many matched keywords as possible into your bullet points, skills section, and summary — use the EXACT phrasing from the job posting, not synonyms. For unmatched keywords where the candidate has transferable experience, frame the transferable skill using the employer's terminology.
-- For gaps with transferable skills listed, address them by emphasizing the transferable experience using language that bridges to what the employer wants
+- ATS KEYWORDS: Where the candidate genuinely has a listed skill, use the employer's exact phrasing (not synonyms) so ATS systems pick it up. Weave keywords in naturally — a human recruiter reads this too, and keyword-stuffed resumes get rejected. Only include keywords the candidate actually has experience with.
+- For gaps with transferable skills listed, briefly frame the real experience using language that bridges to what the employer wants. If a gap has NO transferable skill listed, SKIP IT — do not attempt to fill it.
 - Keep it to 1-2 pages worth of content
 - Use clean markdown formatting with clear sections
 - Include: Contact header, Professional Summary (tailored), Key Skills (relevant ones first), Professional Experience, Education
 - MANDATORY: The Professional Experience section must include ALL {len(profile.get('work_history', []))} positions from the work history above. Every single one. You may reorder by relevance and give less-relevant jobs fewer bullets, but no position may be omitted.
-- Do NOT fabricate experience or skills — only reorganize and emphasize what's real
 - Make the professional summary directly address what this employer is looking for
+
+ABSOLUTE RULES — VIOLATING THESE MAKES THE RESUME UNUSABLE:
+- NEVER invent certifications, licenses, or credentials the candidate does not have. If a certification is not explicitly listed in the source resume or candidate profile above, do NOT include it. This includes PMP, OSHA, Six Sigma, CompTIA, ITIL, or any other cert.
+- NEVER claim proficiency in software, tools, or platforms not mentioned in the source resume or candidate profile. If the candidate doesn't list SAP, Salesforce, ServiceNow, etc., do NOT add them.
+- NEVER fabricate degrees, education, or training programs.
+- NEVER invent metrics, percentages, or dollar figures. Only use numbers that appear in the source material. "Managed a team" is fine — "Managed a team of 15 achieving 40% efficiency gains" is fabrication if those numbers aren't in the source.
+- You may REFRAME and EMPHASIZE real experience using the employer's language. You may NOT create experience that doesn't exist.
+- When in doubt, leave it out. A honest resume with gaps beats a fabricated one that gets caught in an interview.
 
 Output the resume in clean markdown. No commentary before or after — just the resume."""
 
@@ -513,14 +520,19 @@ TARGET JOB:
 INSTRUCTIONS:
 - Write a professional cover letter (3-4 paragraphs)
 - Opening: Hook that shows you understand what this company/role needs
-- Body: Connect 2-3 specific experiences to what the job requires — be concrete, not generic. Prioritize addressing the matched ATS keywords above and use the employer's exact terminology where natural.
-- Where gaps exist with transferable skills, briefly frame the transferable experience as relevant (don't call out the gap — just bridge to it)
+- Body: Connect 2-3 specific experiences to what the job requires — be concrete, not generic. Use the employer's terminology where it naturally fits, but do NOT stuff keywords. This should read like a person wrote it, not an ATS optimizer.
+- Where gaps exist with transferable skills, briefly frame the transferable experience as relevant (don't call out the gap — just bridge to it). If there's no honest bridge, skip it.
 - Closing: Confident but not arrogant, express genuine interest, call to action
 - Tone: Professional, direct, personable — not stuffy corporate-speak
 - Do NOT use cliches like "I'm writing to express my interest" or "I believe I would be an asset"
-- Do NOT fabricate anything — only reference real experience from the profile
 - Keep it under 400 words
 - Use markdown formatting
+
+ABSOLUTE RULES — VIOLATING THESE MAKES THE LETTER UNUSABLE:
+- NEVER reference certifications, licenses, software, tools, or credentials the candidate does not have. If it's not in the profile or work history above, do NOT mention it.
+- NEVER fabricate metrics, team sizes, dollar figures, or outcomes not in the source material.
+- Only reference real experience from the candidate profile and work history above.
+- You may reframe real experience using the employer's language. You may NOT invent experience.
 
 Output only the cover letter. No commentary before or after."""
 
@@ -617,7 +629,7 @@ INSTRUCTIONS:
 - Apply the user's requested changes to the {doc_label}
 - Keep all other content and formatting intact unless the change requires restructuring
 - Maintain the same markdown formatting style
-- Do NOT fabricate new experience or skills — only adjust what's already there
+- NEVER add certifications, software, tools, credentials, or metrics that weren't in the original document or the candidate's real background
 - Do NOT add commentary before or after — output ONLY the revised {doc_label}"""
 
     result = llm_chat(

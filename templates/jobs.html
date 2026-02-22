@@ -358,6 +358,55 @@
       max-width: 500px;
     }
 
+    /* ── Favorite Star ─────────────────────────────────── */
+    .fav-star {
+      cursor: pointer;
+      font-size: 1rem;
+      line-height: 1;
+      margin-right: 6px;
+      vertical-align: middle;
+      transition: color 0.15s, transform 0.15s;
+    }
+
+    .fav-star:hover {
+      transform: scale(1.2);
+    }
+
+    .fav-star.active {
+      color: #fbbf24;
+    }
+
+    .fav-star.inactive {
+      color: #4b5563;
+    }
+
+    .job-row.favorited {
+      border-left: 3px solid #fbbf24;
+    }
+
+    .fav-filter-btn {
+      background: #111318;
+      color: #4b5563;
+      border: 1px solid #2a2f3e;
+      border-radius: 6px;
+      padding: 0.3rem 0.55rem;
+      cursor: pointer;
+      font-size: 1rem;
+      line-height: 1;
+      transition: all 0.15s;
+    }
+
+    .fav-filter-btn:hover {
+      border-color: #fbbf24;
+      color: #fbbf24;
+    }
+
+    .fav-filter-btn.active {
+      background: rgba(251, 191, 36, 0.12);
+      color: #fbbf24;
+      border-color: rgba(251, 191, 36, 0.4);
+    }
+
     /* ── Empty State ───────────────────────────────────── */
     .empty-state {
       text-align: center;
@@ -436,11 +485,16 @@
       <select id="filter-sort" onchange="applyFilters()">
         <option value="score_desc" {% if current_sort == 'score' and current_order == 'desc' %}selected{% endif %}>Score (High &rarr; Low)</option>
         <option value="score_asc" {% if current_sort == 'score' and current_order == 'asc' %}selected{% endif %}>Score (Low &rarr; High)</option>
+        <option value="is_favorite_desc" {% if current_sort == 'is_favorite' and current_order == 'desc' %}selected{% endif %}>Favorites First</option>
         <option value="created_at_desc" {% if current_sort == 'created_at' and current_order == 'desc' %}selected{% endif %}>Date (Newest)</option>
         <option value="created_at_asc" {% if current_sort == 'created_at' and current_order == 'asc' %}selected{% endif %}>Date (Oldest)</option>
         <option value="company_asc" {% if current_sort == 'company' and current_order == 'asc' %}selected{% endif %}>Company (A &rarr; Z)</option>
         <option value="title_asc" {% if current_sort == 'title' and current_order == 'asc' %}selected{% endif %}>Title (A &rarr; Z)</option>
       </select>
+
+      <button class="fav-filter-btn {% if current_favorites %}active{% endif %}" id="favFilterBtn" onclick="toggleFavFilter()" title="Show favorites only">
+        {% if current_favorites %}&#9733;{% else %}&#9734;{% endif %}
+      </button>
 
       <label>Size</label>
       <div class="size-toggle">
@@ -491,8 +545,9 @@
         </thead>
         <tbody>
           {% for job in jobs %}
-          <tr class="job-row" onclick="openJob({{ job.id }}, event)">
+          <tr class="job-row {% if job.is_favorite %}favorited{% endif %}" id="row-{{ job.id }}" onclick="openJob({{ job.id }}, event)">
             <td>
+              <span class="fav-star {% if job.is_favorite %}active{% else %}inactive{% endif %}" data-job-id="{{ job.id }}" onclick="toggleFavorite({{ job.id }}, event)">{% if job.is_favorite %}&#9733;{% else %}&#9734;{% endif %}</span>
               {% if job.score is not none %}
               <span class="score-badge {% if job.score >= 80 %}score-high{% elif job.score >= 60 %}score-good{% elif job.score >= 40 %}score-mid{% else %}score-low{% endif %}">
                 {{ job.score }}
@@ -592,6 +647,8 @@
       if (minScore && minScore !== '0') params.set('min_score', minScore);
       if (sort) params.set('sort', sort);
       if (order) params.set('order', order);
+      var curParams = new URLSearchParams(window.location.search);
+      if (curParams.get('favorites') === '1') params.set('favorites', '1');
       window.location.href = '/jobs' + (params.toString() ? '?' + params.toString() : '');
     }
 
@@ -613,6 +670,8 @@
       if (minScore && minScore !== '0') params.set('min_score', minScore);
       params.set('sort', column);
       params.set('order', order);
+      var curParams = new URLSearchParams(window.location.search);
+      if (curParams.get('favorites') === '1') params.set('favorites', '1');
       window.location.href = '/jobs?' + params.toString();
     }
 
@@ -672,6 +731,43 @@
     document.getElementById('qs-location').addEventListener('keydown', function(e) {
       if (e.key === 'Enter') runQuickSearch();
     });
+
+    /* ── Favorite Toggle ──────────────────────────────── */
+    function toggleFavorite(jobId, event) {
+      event.stopPropagation();
+      fetch('/api/jobs/' + jobId + '/favorite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      })
+      .then(function(resp) { return resp.json(); })
+      .then(function(data) {
+        if (!data.ok) return;
+        var star = document.querySelector('.fav-star[data-job-id="' + jobId + '"]');
+        var row = document.getElementById('row-' + jobId);
+        if (data.is_favorite) {
+          star.innerHTML = '&#9733;';
+          star.classList.remove('inactive');
+          star.classList.add('active');
+          if (row) row.classList.add('favorited');
+        } else {
+          star.innerHTML = '&#9734;';
+          star.classList.remove('active');
+          star.classList.add('inactive');
+          if (row) row.classList.remove('favorited');
+        }
+      });
+    }
+
+    /* ── Favorites Filter ──────────────────────────────── */
+    function toggleFavFilter() {
+      var params = new URLSearchParams(window.location.search);
+      if (params.get('favorites') === '1') {
+        params.delete('favorites');
+      } else {
+        params.set('favorites', '1');
+      }
+      window.location.href = '/jobs' + (params.toString() ? '?' + params.toString() : '');
+    }
 
     /* ── Inline Status Change (table) ──────────────────── */
     function changeStatus(selectEl) {

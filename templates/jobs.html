@@ -813,6 +813,30 @@
     }
 
     /* ── Quick Search ──────────────────────────────────── */
+    var isSearching = false;
+
+    function setSearchLock(locked) {
+      isSearching = locked;
+      // Disable filters/sorts so navigation doesn't kill the in-flight search
+      var controls = document.querySelectorAll('.filter-bar select, .filter-bar button, .jobs-table thead th.sortable');
+      controls.forEach(function(el) {
+        if (locked) {
+          el.style.pointerEvents = 'none';
+          el.style.opacity = '0.4';
+        } else {
+          el.style.pointerEvents = '';
+          el.style.opacity = '';
+        }
+      });
+    }
+
+    window.addEventListener('beforeunload', function(e) {
+      if (isSearching) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    });
+
     function runQuickSearch() {
       var query = document.getElementById('qs-query').value.trim();
       var location = document.getElementById('qs-location').value.trim();
@@ -826,6 +850,7 @@
       }
 
       btn.disabled = true;
+      setSearchLock(true);
       statusEl.className = 'qs-status running';
       statusEl.textContent = 'Searching (this may take a minute)...';
 
@@ -836,6 +861,7 @@
       })
       .then(function(resp) { return resp.json(); })
       .then(function(data) {
+        setSearchLock(false);
         if (data.error) {
           statusEl.className = 'qs-status error';
           statusEl.textContent = data.error;
@@ -849,6 +875,7 @@
         }, 1000);
       })
       .catch(function(err) {
+        setSearchLock(false);
         statusEl.className = 'qs-status error';
         statusEl.textContent = 'Search failed: ' + err.message;
         btn.disabled = false;

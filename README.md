@@ -1,8 +1,8 @@
 # JobHunter3000
 
-A self-hosted job search automation platform that combines automated job board scraping, AI-powered job scoring, and tailored resume generation into a single tool. It scrapes eight major job boards on a configurable schedule, deduplicates results across sources, and scores every listing against your resume using your choice of LLM provider. Jobs scoring above your threshold trigger push notifications, and a daily email digest keeps you current without having to check the dashboard.
+I built this because job searching sucks. Checking eight job boards daily, keeping track of what I applied to, tailoring resumes for each posting — it's a full-time job before you even have one.
 
-The web interface serves as a full pipeline tracker: browse and filter scored listings, generate tailored resumes and cover letters per posting, and move jobs through status stages from discovery to offer. Search profiles let you define multiple targeted queries with different keywords, locations, and salary floors, then run them individually or all at once. Everything runs locally — your resume data, API keys, and job search activity never leave your machine.
+JH3000 automates the grind: it scrapes job boards on a schedule, scores every listing against your resume with AI, generates tailored application materials, and tracks your whole pipeline. Everything runs locally — your data never leaves your machine.
 
 ![Intel — Job listings with AI scores](docs/screenshots/intel.png)
 

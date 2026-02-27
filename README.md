@@ -1,19 +1,35 @@
 # JobHunter3000
 
-Automated job search platform: scrape 8 job boards, AI-score every listing against your resume, generate tailored application materials, and track your pipeline — all running locally on your machine.
+A self-hosted job search automation platform that combines automated job board scraping, AI-powered job scoring, and tailored resume generation into a single tool. It scrapes eight major job boards on a configurable schedule, deduplicates results across sources, and scores every listing against your resume using your choice of LLM provider. Jobs scoring above your threshold trigger push notifications, and a daily email digest keeps you current without having to check the dashboard.
 
-## What It Does
+The web interface serves as a full pipeline tracker: browse and filter scored listings, generate tailored resumes and cover letters per posting, and move jobs through status stages from discovery to offer. Search profiles let you define multiple targeted queries with different keywords, locations, and salary floors, then run them individually or all at once. Everything runs locally — your resume data, API keys, and job search activity never leave your machine.
 
-1. **Scrapes 8 job boards** on a schedule (Indeed, SimplyHired, Dice, Rigzone, RemoteOK, WeWorkRemotely, USAJobs, ZipRecruiter)
-2. **AI-scores every job 0-100** against your resume with pros, cons, fit summary, ghost risk detection, and gap analysis
-3. **Generates tailored resumes and cover letters** per job posting (Markdown, DOCX, PDF)
-4. **Interview prep** — AI-generated questions with talking points from your experience
-5. **ATS keyword matching** — see which JD keywords you hit and which you're missing
-6. **Analytics dashboard** — track applications, response rates, source effectiveness
-7. **Push notifications** for high-scoring matches (Pushover)
-8. **Daily email digest** with top 5 jobs to apply to and follow-up reminders
-9. **Anti-filters** — exclude companies, title keywords, and description keywords automatically
-10. **Search campaigns** — run multiple targeted searches, filter by campaign
+![Intel — Job listings with AI scores](docs/screenshots/intel.png)
+
+## Features
+
+- **Scrapes 8 job boards** on a schedule (Indeed, SimplyHired, Dice, Rigzone, RemoteOK, WeWorkRemotely, USAJobs, ZipRecruiter)
+- **AI-scores every job 0-100** against your resume with pros, cons, fit summary, ghost risk detection, and gap analysis
+- **Generates tailored resumes and cover letters** per job posting (Markdown, DOCX, PDF)
+- **Interview prep** — AI-generated questions with talking points from your experience
+- **ATS keyword matching** — see which JD keywords you hit and which you're missing
+- **Pipeline tracker** — kanban-style board from New through Offer
+- **Analytics dashboard** — track applications, response rates, source effectiveness, score distribution
+- **Push notifications** for high-scoring matches (Pushover)
+- **Daily email digest** with top jobs and follow-up reminders
+- **Anti-filters** — exclude companies, title keywords, and description keywords automatically
+- **Search profiles** — run multiple targeted searches with per-profile controls
+- **Completely local** — your data never leaves your machine
+
+## Screenshots
+
+| Pipeline Tracker | Analytics Dashboard |
+|:---:|:---:|
+| ![Pipeline](docs/screenshots/pipeline.png) | ![Analytics](docs/screenshots/analytics.png) |
+
+| Recon — Scraper Controls | Dossier — Search Preferences |
+|:---:|:---:|
+| ![Recon](docs/screenshots/recon.png) | ![Dossier](docs/screenshots/dossier.png) |
 
 ## Tech Stack
 
@@ -27,6 +43,25 @@ Automated job search platform: scrape 8 job boards, AI-score every listing again
 | Charts | Chart.js |
 | Storage | SQLite |
 | Language | Python 3.12 |
+
+## Quick Start
+
+```bash
+git clone https://github.com/zaphodsdad/jobhunter3000.git
+cd jobhunter3000
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+playwright install chromium
+
+# Run the web UI
+uvicorn app:app --host 0.0.0.0 --port 8001
+```
+
+Then open http://localhost:8001 and:
+1. Configure your LLM provider in **Settings**
+2. Upload your resume on the **Arsenal** page
+3. Review your AI-generated candidate profile on the **Dossier** page
+4. Run a scrape from the **Recon** page
 
 ## LLM Provider Options
 
@@ -45,7 +80,6 @@ Free tier with rate limits. Good for scoring.
 2. Sign in with your Google account
 3. Click "Get API Key" > Create API key
 4. No credit card required — free tier gives 15 requests/min on Flash, 2/min on Pro
-5. Paste into JH3000 Settings
 
 ### Ollama (Local / Advanced)
 Completely free, completely private. Requires local hardware.
@@ -53,26 +87,9 @@ Completely free, completely private. Requires local hardware.
 2. Pull a model: `ollama pull qwen2.5-coder:32b` (or smaller)
 3. Point JH3000 to your Ollama endpoint (default: `http://localhost:11434`)
 
-## Quick Start
-
-```bash
-# Clone and install
-git clone <repo-url> && cd jobhunter3000
-python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-playwright install chromium
-
-# Run the web UI
-uvicorn app:app --host 0.0.0.0 --port 8001
-
-# Open http://localhost:8001
-# Configure your LLM provider in Settings
-# Upload resumes on the Arsenal page
-# Analyze on the Dossier page
-# Run a scrape from the Recon page
-```
-
 ## Cron (Optional)
+
+Automate scraping and email digests:
 
 ```bash
 # Scrape + score + notify every 8 hours
@@ -133,4 +150,4 @@ jobhunter3000/
 
 ## License
 
-Proprietary. Copyright (c) 2026 John Burks. All rights reserved. See [LICENSE](LICENSE).
+MIT License. See [LICENSE](LICENSE).

@@ -1090,6 +1090,57 @@ def run_scrape_for_profile(profile: dict, enabled_boards: list = None) -> list[d
     return all_jobs
 
 
+def run_single_profile_scrape(profile_index: int, settings: dict) -> dict:
+    """Run scrape for a single search profile by index."""
+    from services.db import get_db, upsert_job
+
+    profiles = settings.get("search_profiles", [])
+    if profile_index < 0 or profile_index >= len(profiles):
+        return {"error": f"Invalid profile index: {profile_index}", "jobs_found": 0, "jobs_new": 0}
+
+    profile = profiles[profile_index]
+    enabled_boards = settings.get("enabled_boards", ["indeed", "simplyhired"])
+    campaign_name = profile.get("name", profile.get("query", ""))
+
+    results = {
+        "profile_name": campaign_name,
+        "profiles_run": 1,
+        "jobs_found": 0,
+        "jobs_new": 0,
+        "errors": [],
+        "boards_used": [b for b in profile.get("boards", ["indeed"]) if b in enabled_boards],
+        "started_at": datetime.now().isoformat(),
+    }
+
+    conn = get_db()
+    try:
+        logger.info(f"Scraping single profile: {campaign_name}")
+        jobs = run_scrape_for_profile(profile, enabled_boards)
+        results["jobs_found"] = len(jobs)
+
+        excluded = 0
+        for job in jobs:
+            reason = _should_exclude(job, settings)
+            if reason:
+                excluded += 1
+                logger.debug(f"Excluded: {job.get('title', '?')} — {reason}")
+                continue
+            job["search_query"] = campaign_name
+            new_id = upsert_job(conn, job)
+            if new_id > 0:
+                results["jobs_new"] += 1
+        if excluded:
+            logger.info(f"Anti-filters excluded {excluded} jobs from '{campaign_name}'")
+    except Exception as e:
+        error_msg = f"Profile '{campaign_name}': {str(e)}"
+        logger.error(error_msg)
+        results["errors"].append(error_msg)
+
+    conn.close()
+    results["completed_at"] = datetime.now().isoformat()
+    return results
+
+
 def run_full_scrape(settings: dict) -> dict:
     """Run scrapes for all enabled search profiles across all enabled boards."""
     from services.db import get_db, upsert_job

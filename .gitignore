@@ -91,6 +91,9 @@ Thumbs.db
 *.tar.gz
 *.zip
 
+# Browser Extension (commercial — separate repo)
+extension/
+
 # Syncthing
 .stfolder/
 .stignore

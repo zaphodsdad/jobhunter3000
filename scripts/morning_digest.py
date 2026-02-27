@@ -7,7 +7,7 @@ Usage:
     python3 scripts/morning_digest.py
 
 Cron (7:00 AM CT = 13:00 UTC):
-    0 13 * * * cd /root/jobhunter3000 && /root/jobhunter3000/.venv/bin/python scripts/morning_digest.py >> logs/digest.log 2>&1
+    0 13 * * * cd /path/to/jobhunter3000 && .venv/bin/python scripts/morning_digest.py >> logs/digest.log 2>&1
 """
 
 import json
@@ -28,7 +28,7 @@ from services.settings import load_settings
 # Override via environment variables or edit here for your setup
 EMAIL_TO = os.environ.get("JH3000_EMAIL_TO", "")
 EMAIL_FROM = os.environ.get("JH3000_EMAIL_FROM", "")
-LOG_FILE = "/root/jobhunter3000/logs/morning-digest.log"
+LOG_FILE = os.path.join(os.path.dirname(os.path.dirname(__file__)), "logs", "morning-digest.log")
 APP_URL = os.environ.get("JH3000_APP_URL", "http://localhost:8001")
 
 

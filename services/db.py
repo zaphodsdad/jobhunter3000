@@ -200,7 +200,7 @@ def get_jobs(conn: sqlite3.Connection, status: str = None, source: str = None,
     where_clause = " AND ".join(where_parts) if where_parts else "1=1"
 
     # Whitelist sort columns
-    valid_sorts = {"created_at", "score", "title", "company", "status", "location", "is_favorite"}
+    valid_sorts = {"created_at", "score", "title", "company", "status", "location", "is_favorite", "search_query"}
     if sort not in valid_sorts:
         sort = "created_at"
     if order not in ("asc", "desc"):

@@ -580,7 +580,7 @@ def revise_document(job: dict, doc_type: str, instruction: str,
     """Revise a previously generated resume or cover letter based on user feedback.
 
     doc_type: "resume" or "cover"
-    instruction: user's revision note (e.g. "tone down the HIWC section")
+    instruction: user's revision note (e.g. "emphasize leadership experience")
     Returns {ok, markdown, path} or {error}.
     """
     if not settings:

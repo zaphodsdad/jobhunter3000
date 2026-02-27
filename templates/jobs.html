@@ -604,6 +604,8 @@
         <option value="created_at_asc" {% if current_sort == 'created_at' and current_order == 'asc' %}selected{% endif %}>Date (Oldest)</option>
         <option value="company_asc" {% if current_sort == 'company' and current_order == 'asc' %}selected{% endif %}>Company (A &rarr; Z)</option>
         <option value="title_asc" {% if current_sort == 'title' and current_order == 'asc' %}selected{% endif %}>Title (A &rarr; Z)</option>
+        <option value="search_query_asc" {% if current_sort == 'search_query' and current_order == 'asc' %}selected{% endif %}>Profile (A &rarr; Z)</option>
+        <option value="search_query_desc" {% if current_sort == 'search_query' and current_order == 'desc' %}selected{% endif %}>Profile (Z &rarr; A)</option>
       </select>
 
       <button class="fav-filter-btn {% if current_favorites %}active{% endif %}" id="favFilterBtn" onclick="toggleFavFilter()" title="Show favorites only">
@@ -625,7 +627,7 @@
       <label>Quick Search</label>
       <input type="text" id="qs-query" class="qs-query" placeholder="e.g. IT Support, Facility Manager">
       <label>Location</label>
-      <input type="text" id="qs-location" class="qs-location" placeholder="e.g. Oklahoma City, OK">
+      <input type="text" id="qs-location" class="qs-location" placeholder="e.g. Your City, ST">
       <button id="qs-btn" onclick="runQuickSearch()">Search</button>
       <span id="qs-status" class="qs-status"></span>
     </div>
@@ -687,13 +689,8 @@
               <span class="score-badge score-low">&mdash;</span>
               {% endif %}
             </td>
-            <td class="job-title-cell">
-              {{ job.title }}
-              {% if job.ghost_risk == 'high' %}<span class="ghost-badge ghost-high" title="Possibly a ghost/fake listing">Ghost?</span>
-              {% elif job.ghost_risk == 'medium' %}<span class="ghost-badge ghost-medium" title="Some vague elements in listing">Vague</span>{% endif %}
-              {% if job.summary %}<div class="job-summary-text">{{ job.summary }}</div>{% endif %}
-            </td>
-            <td class="job-company-cell">{{ job.company or '—' }}{% if not job.salary_text and job.salary_estimate %}<div style="font-size:0.72rem;color:#fbbf24;margin-top:1px;" title="AI-estimated salary">{{ job.salary_estimate }} (est.)</div>{% elif job.salary_text %}<div style="font-size:0.72rem;color:#6b7280;margin-top:1px;">{{ job.salary_text }}</div>{% endif %}</td>
+            <td class="job-title-cell">{{ job.title }}</td>
+            <td class="job-company-cell">{{ job.company or '—' }}</td>
             <td class="job-location-cell">{{ job.location or '—' }}</td>
             <td>
               <span class="status-badge status-{{ job.status or 'new' }}">{{ (job.status or 'new') | capitalize }}</span>

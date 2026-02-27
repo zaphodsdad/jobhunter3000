@@ -7,7 +7,7 @@ Usage:
     python3 scripts/run_scrape.py
 
 Cron example (3x daily at 7 AM, 3 PM, 11 PM CT):
-    0 13,21,5 * * * cd /root/jobhunter3000 && /root/jobhunter3000/.venv/bin/python scripts/run_scrape.py >> logs/scrape.log 2>&1
+    0 13,21,5 * * * cd /path/to/jobhunter3000 && .venv/bin/python scripts/run_scrape.py >> logs/scrape.log 2>&1
 """
 
 import json

@@ -347,10 +347,27 @@ async def scraper_page(request: Request):
     runs = conn.execute(
         "SELECT * FROM scrape_runs ORDER BY started_at DESC LIMIT 20"
     ).fetchall()
+
+    # Get last run date for each profile name
+    last_runs = {}
+    last_run_rows = conn.execute(
+        """SELECT source, MAX(completed_at) as last_run
+           FROM scrape_runs
+           WHERE status = 'completed' AND source IS NOT NULL AND source != ''
+           GROUP BY source"""
+    ).fetchall()
+    for row in last_run_rows:
+        last_runs[row["source"]] = row["last_run"]
+
     conn.close()
+
+    profiles = settings.get("search_profiles", [])
+    for profile in profiles:
+        profile["last_run"] = last_runs.get(profile.get("name", ""))
+
     return templates.TemplateResponse("scraper.html", {
         "request": request,
-        "search_profiles": settings.get("search_profiles", []),
+        "search_profiles": profiles,
         "runs": [dict(r) for r in runs],
     })
 
@@ -1080,10 +1097,16 @@ async def api_run_scraper():
         except Exception:
             pass
 
+    # Build profile names for the run log
+    profiles = settings.get("search_profiles", [])
+    enabled_names = [p.get("name", "?") for p in profiles if p.get("enabled", True)]
+    source_label = "All profiles" if len(enabled_names) > 2 else ", ".join(enabled_names)
+
     # Log the run start
     conn = get_db()
     cursor = conn.execute(
-        "INSERT INTO scrape_runs (started_at, status) VALUES (datetime('now'), 'running')"
+        "INSERT INTO scrape_runs (started_at, source, status) VALUES (datetime('now'), ?, 'running')",
+        (source_label,),
     )
     run_id = cursor.lastrowid
     conn.commit()
@@ -1163,6 +1186,140 @@ async def api_run_scraper():
     results = await loop.run_in_executor(None, _do_scrape)
 
     # Snapshot credits after run and calculate cost
+    if or_key and credits_before is not None:
+        try:
+            async with _httpx.AsyncClient(timeout=10.0) as client:
+                resp = await client.get(
+                    "https://openrouter.ai/api/v1/credits",
+                    headers={"Authorization": f"Bearer {or_key}"},
+                )
+                d = resp.json().get("data", {})
+                credits_after = float(d.get("total_credits", 0)) - float(d.get("total_usage", 0))
+                results["credits_before"] = round(credits_before, 4)
+                results["credits_after"] = round(credits_after, 4)
+                results["run_cost"] = round(credits_before - credits_after, 4)
+        except Exception:
+            pass
+
+    return JSONResponse(results)
+
+
+@app.post("/api/scraper/run-profile")
+async def api_run_single_profile(request: Request):
+    """Run a scrape for a single search profile by index."""
+    import asyncio
+    import httpx as _httpx
+    from services.scraper import run_single_profile_scrape
+
+    body = await request.json()
+    profile_index = body.get("profile_index")
+    if profile_index is None:
+        return JSONResponse({"error": "profile_index is required"}, status_code=400)
+
+    settings = load_settings()
+
+    # Get profile name for the run log
+    profiles = settings.get("search_profiles", [])
+    profile_name = profiles[profile_index]["name"] if profile_index < len(profiles) else "unknown"
+
+    # Snapshot credits before run
+    credits_before = None
+    or_key = settings.get("openrouter_api_key", "")
+    if or_key:
+        try:
+            async with _httpx.AsyncClient(timeout=10.0) as client:
+                resp = await client.get(
+                    "https://openrouter.ai/api/v1/credits",
+                    headers={"Authorization": f"Bearer {or_key}"},
+                )
+                d = resp.json().get("data", {})
+                credits_before = float(d.get("total_credits", 0)) - float(d.get("total_usage", 0))
+        except Exception:
+            pass
+
+    # Log the run start
+    conn = get_db()
+    cursor = conn.execute(
+        "INSERT INTO scrape_runs (started_at, source, status) VALUES (datetime('now'), ?, 'running')",
+        (profile_name,),
+    )
+    run_id = cursor.lastrowid
+    conn.commit()
+    conn.close()
+
+    def _do_scrape():
+        results = run_single_profile_scrape(profile_index, settings)
+
+        # Score new jobs automatically
+        scored = {"scored": 0, "errors": []}
+        try:
+            from services.scorer import score_jobs
+            score_conn = get_db()
+            scored = score_jobs(score_conn, settings)
+            score_conn.close()
+        except Exception as e:
+            scored["errors"].append(str(e))
+
+        # Send notifications for high-scoring new jobs
+        notified = 0
+        try:
+            from services.notifier import notify_job_match, is_dream_company
+            notify_conn = get_db()
+            threshold = settings.get("notify_threshold", 60)
+            rows = notify_conn.execute(
+                "SELECT * FROM jobs WHERE score IS NOT NULL AND notified = 0",
+            ).fetchall()
+            for row in rows:
+                job = dict(row)
+                score = job.get("score", 0) or 0
+                if score < threshold and not is_dream_company(job, settings):
+                    continue
+                score_data = {
+                    "score": score,
+                    "pros": json.loads(job.get("pros", "[]") or "[]"),
+                    "cons": json.loads(job.get("cons", "[]") or "[]"),
+                    "fit_summary": job.get("fit_summary", ""),
+                }
+                result = notify_job_match(job, score_data, settings)
+                if result.get("ok"):
+                    notify_conn.execute(
+                        "UPDATE jobs SET notified = 1 WHERE id = ?", (job["id"],)
+                    )
+                    notify_conn.commit()
+                    notified += 1
+            notify_conn.close()
+        except Exception as e:
+            results.setdefault("errors", []).append(f"Notify error: {e}")
+
+        # Update scrape run record
+        update_conn = get_db()
+        update_conn.execute(
+            """UPDATE scrape_runs SET
+               completed_at = datetime('now'),
+               source = ?, jobs_found = ?, jobs_new = ?, jobs_scored = ?,
+               notifications_sent = ?, status = ?
+               WHERE id = ?""",
+            (
+                profile_name,
+                results.get("jobs_found", 0),
+                results.get("jobs_new", 0),
+                scored.get("scored", 0),
+                notified,
+                "error" if results.get("errors") else "completed",
+                run_id,
+            ),
+        )
+        update_conn.commit()
+        update_conn.close()
+
+        results["scored"] = scored.get("scored", 0)
+        results["notified"] = notified
+        return results
+
+    loop = asyncio.get_event_loop()
+    results = await loop.run_in_executor(None, _do_scrape)
+
+    # Snapshot credits after run
     if or_key and credits_before is not None:
         try:
             async with _httpx.AsyncClient(timeout=10.0) as client:

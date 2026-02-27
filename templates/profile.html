@@ -965,13 +965,13 @@
                     <label for="candidate_name">Your Name</label>
                     <input type="text" id="candidate_name" name="candidate_name"
                            value="{{ settings.candidate_name }}"
-                           placeholder="John Burks">
+                           placeholder="Jane Doe">
                 </div>
                 <div class="form-group">
                     <label for="candidate_location">Location</label>
                     <input type="text" id="candidate_location" name="candidate_location"
                            value="{{ settings.candidate_location }}"
-                           placeholder="Oklahoma City, OK">
+                           placeholder="Your City, ST">
                 </div>
             </div>
 
@@ -1128,14 +1128,10 @@
                           rows="12"
                           style="font-size: 13px; line-height: 1.6;"
                           placeholder="Example:
-— 3-node Proxmox cluster (64GB main + 2 satellite nodes) running 12 LXC containers and 2 VMs
-— 20TB Unraid NAS with parity, Docker stack (Plex, Sonarr, Radarr, etc.)
-— OPNsense firewall with Tailscale VPN for remote access across 12 devices
-— 10 custom MCP servers on dedicated gateway node (infrastructure, media, business APIs)
-— Uptime Kuma monitoring 22 services with Pushover alerts
-— Automated nightly PBS backups, rclone offsite, Syncthing real-time sync
-— 3 daily automated email reports (business metrics, infrastructure health, media)
-— Mac Studio M1 32GB as local LLM inference server (Ollama, 6 models)">{{ settings.candidate_technical_projects }}</textarea>
+— Home lab with virtualization cluster running containers and VMs
+— NAS with automated backups and media services
+— Custom automation scripts and monitoring dashboards
+— Self-hosted services with VPN for remote access">{{ settings.candidate_technical_projects }}</textarea>
             </div>
         </div>
 

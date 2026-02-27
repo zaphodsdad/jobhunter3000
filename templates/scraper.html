@@ -182,6 +182,23 @@
             border-radius: 4px;
         }
 
+        .profile-last-run {
+            color: #4b5563;
+            font-size: 0.72rem;
+        }
+
+        .profile-last-run.profile-never {
+            color: #6b7280;
+            font-style: italic;
+        }
+
+        .profile-run-btn {
+            margin-left: 12px;
+            padding: 4px 14px;
+            font-size: 0.75rem;
+            flex-shrink: 0;
+        }
+
         .profile-toggle {
             margin-left: 12px;
         }
@@ -374,7 +391,7 @@
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
                 <div>
                     <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 4px;">Location</label>
-                    <input type="text" id="manLocation" placeholder="Oklahoma City, OK"
+                    <input type="text" id="manLocation" placeholder="Your City, ST"
                            style="width:100%; padding:8px 12px; font-size:14px; background:var(--bg-nav); border:1px solid var(--border); border-radius:6px; color:var(--text-primary); font-family:inherit;">
                 </div>
                 <div>
@@ -443,6 +460,11 @@
                         {{ profile.query }} &middot; {{ profile.location }}
                         {% if profile.radius_miles %} &middot; {{ profile.radius_miles }}mi{% endif %}
                         {% if profile.salary_min %} &middot; ${{ "{:,}".format(profile.salary_min) }}+{% endif %}
+                        {% if profile.last_run %}
+                        <span class="profile-last-run">&middot; Last ran {{ profile.last_run[:16] | replace('T', ' ') }}</span>
+                        {% else %}
+                        <span class="profile-last-run profile-never">&middot; Never run</span>
+                        {% endif %}
                     </div>
                 </div>
                 <div class="profile-badges">
@@ -450,6 +472,7 @@
                     <span class="board-tag">{{ board }}</span>
                     {% endfor %}
                 </div>
+                <button class="btn btn-secondary profile-run-btn" onclick="runProfile(this, {{ loop.index0 }})" {% if not profile.enabled %}disabled{% endif %}>Run</button>
             </div>
             {% endfor %}
 
@@ -742,6 +765,46 @@
             btn.textContent = 'Error';
             btn.style.color = '#f87171';
             btn.style.borderColor = '#f87171';
+        }
+    }
+
+    // ── Run Single Profile ──────────────────────────────
+    async function runProfile(btn, profileIndex) {
+        var origText = btn.textContent;
+        var status = document.getElementById('actionStatus');
+        var text = document.getElementById('actionText');
+
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner"></span>';
+        status.classList.add('visible');
+        text.textContent = 'Running profile scrape...';
+
+        try {
+            var resp = await fetch('/api/scraper/run-profile', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ profile_index: profileIndex })
+            });
+            var data = await resp.json();
+
+            if (data.error) throw new Error(data.error);
+
+            var msg = 'Done! Found ' + data.jobs_found + ' jobs, ' + data.jobs_new + ' new.';
+            if (data.scored) msg += ' Scored ' + data.scored + '.';
+            if (data.run_cost !== undefined) msg += ' Cost: $' + data.run_cost.toFixed(4);
+            msg += ' Reloading...';
+            text.textContent = msg;
+
+            btn.innerHTML = data.jobs_new + ' new';
+            btn.style.color = '#4ade80';
+            btn.style.borderColor = '#4ade80';
+
+            if (window.refreshTopbarCredits) refreshTopbarCredits();
+            setTimeout(function() { window.location.reload(); }, 1500);
+        } catch (err) {
+            text.textContent = 'Error: ' + err.message;
+            btn.textContent = origText;
+            btn.disabled = false;
         }
     }
 

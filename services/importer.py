@@ -1,5 +1,5 @@
 """
-Excel spreadsheet importer — reads John's messy job tracking spreadsheet
+Excel spreadsheet importer — reads a job tracking spreadsheet
 and cleans up typos during import.
 """
 
@@ -164,7 +164,7 @@ def import_spreadsheet(filepath: str) -> list[dict]:
             "title": title_clean or "Unknown",
             "company": company_clean,
             "industry": industry_clean,
-            "location": "Oklahoma City, OK",  # Default — all were OKC area
+            "location": "",  # Default if not specified in spreadsheet
             "resume_used": resume_clean,
             "status": final_status,
             "applied_date": applied_date,

@@ -33,11 +33,16 @@ logger = logging.getLogger("jobhunter3000.pipeline")
 
 
 def main():
+    settings = load_settings()
+
+    # Check if auto-scraping is enabled (toggle in Settings UI)
+    if not settings.get("auto_scrape_enabled", False):
+        logger.info("Auto-scrape is disabled. Enable it in Settings > Automation. Exiting.")
+        return
+
     logger.info("=" * 60)
     logger.info("JobHunter3000 pipeline starting")
     logger.info("=" * 60)
-
-    settings = load_settings()
 
     # 1. Record the run
     conn = get_db()

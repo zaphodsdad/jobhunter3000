@@ -458,6 +458,10 @@ async def save_settings_route(request: Request):
     boards = form.getlist("enabled_boards")
     data["enabled_boards"] = [b for b in boards if b]
 
+    # Handle boolean checkboxes (unchecked = absent from form data)
+    for bool_field in ("auto_scrape_enabled", "auto_digest_enabled"):
+        data[bool_field] = bool_field in form
+
     # Handle numeric fields
     for field in ("notify_threshold", "priority_threshold", "max_days_old",
                   "scrape_interval_hours", "display_min_score",

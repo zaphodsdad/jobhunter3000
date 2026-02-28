@@ -428,6 +428,12 @@ def send_email(subject, html):
 
 
 def main():
+    # Check if auto-digest is enabled (toggle in Settings UI)
+    settings = load_settings()
+    if not settings.get("auto_digest_enabled", False):
+        print(f"[{datetime.now().isoformat()}] Auto-digest is disabled. Enable it in Settings > Automation. Exiting.")
+        return
+
     print(f"[{datetime.now().isoformat()}] Building morning digest...")
 
     data = get_digest_data()

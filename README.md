@@ -89,7 +89,7 @@ Completely free, completely private. Requires local hardware.
 
 ## Cron (Optional)
 
-Automate scraping and email digests:
+Automate scraping and email digests. Both scripts check an in-app toggle before running — set up the cron jobs once, then enable/disable from **Settings > Automation** without touching your crontab.
 
 ```bash
 # Scrape + score + notify every 8 hours
@@ -98,6 +98,8 @@ Automate scraping and email digests:
 # Morning digest email at 7 AM
 0 13 * * * cd /path/to/jobhunter3000 && .venv/bin/python scripts/morning_digest.py >> logs/digest.log 2>&1
 ```
+
+Both toggles default to **off** — nothing runs automatically until you flip them on in Settings.
 
 ## Project Structure
 

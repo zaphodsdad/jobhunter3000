@@ -66,6 +66,9 @@ DEFAULTS = {
     "candidate_willing_to_travel": 10,      # max travel percentage
     "candidate_elevator_pitch": "",         # short pitch for cover letters / outreach
     "candidate_technical_projects": "",     # homelab, infrastructure, side projects (freeform)
+    # Automation (cron toggles)
+    "auto_scrape_enabled": False,           # If True, cron scrape script runs; if False, it exits early
+    "auto_digest_enabled": False,           # If True, cron digest email runs; if False, it exits early
     # Setup wizard
     "setup_complete": False,
     "dream_companies": [],                  # Watchlist — alert on ANY job from these companies
